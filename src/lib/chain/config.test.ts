@@ -74,6 +74,17 @@ describe("parseChainIdentifier", () => {
     expect(warn.mock.calls[0][0]).toMatch(/filtered out of discovery/);
   });
 
+  it("acepta el chain id resuelto en el spike", () => {
+    // RF-01.1: la spike enumeró el registro Wallet Standard crudo en Chrome.
+    // Nightly anuncia solana:mainnet | mainnet-beta | testnet | devnet para
+    // Solana, y NINGUNA wallet anuncia un identificador propio de Cookie Chain.
+    // solana:mainnet es además el único que comparten Phantom, MetaMask, OKX y
+    // Nightly: mainnet-beta solo lo anuncia Nightly y filtraría al resto.
+    const warn = vi.fn();
+    expect(parseChainIdentifier("solana:mainnet", warn)).toBe("solana:mainnet");
+    expect(warn).not.toHaveBeenCalled();
+  });
+
   it("no avisa para un namespace solana", () => {
     const warn = vi.fn();
     expect(parseChainIdentifier("solana:devnet", warn)).toBe("solana:devnet");
