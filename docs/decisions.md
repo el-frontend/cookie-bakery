@@ -87,13 +87,13 @@ Notas para RF-04:
 
 ## Incógnitas todavía abiertas
 
-| #   | Incógnita                                                                              | Bloquea              | Cómo se resuelve                         |
-| --- | -------------------------------------------------------------------------------------- | -------------------- | ---------------------------------------- |
-| 1   | ~~Valor correcto de `VITE_WALLET_CHAIN`~~ **RESUELTA** → `solana:mainnet`              | ~~RF-01~~            | Cerrada por la spike RF-01.1 (ver abajo) |
-| 2   | Si `client.sendTransaction` delega en `signAndSendTransactions` de la wallet (RT-03.1) | RF-01, todo lo demás | Spike de fase 1: primera tx real         |
-| 3   | Si Nightly firma con blockhash de Cookie Chain sin rechazar (RT-03.2)                  | RF-02+               | Spike de fase 1                          |
-| 4   | Si la extensión `TokenMetadata` de Token-2022 funciona en esta cadena                  | RF-02                | Crear un mint de prueba en fase 2        |
-| 5   | Orden y `limit` máximo de `getTokenAccounts` en la DAS                                 | RF-04                | Probar al implementar RF-04              |
+| #   | Incógnita                                                                                              | Bloquea   | Cómo se resuelve                             |
+| --- | ------------------------------------------------------------------------------------------------------ | --------- | -------------------------------------------- |
+| 1   | ~~Valor correcto de `VITE_WALLET_CHAIN`~~ **RESUELTA** → `solana:mainnet`                              | ~~RF-01~~ | Cerrada por la spike RF-01.1 (ver abajo)     |
+| 2   | ~~Si `client.sendTransaction` delega en `signAndSendTransactions` (RT-03.1)~~ **RESUELTA** → no delega | ~~todo~~  | Cerrada leyendo el código de Kit (ver abajo) |
+| 3   | Si Nightly firma con blockhash de Cookie Chain sin rechazar (RT-03.2)                                  | RF-02+    | Spike de fase 1                              |
+| 4   | Si la extensión `TokenMetadata` de Token-2022 funciona en esta cadena                                  | RF-02     | Crear un mint de prueba en fase 2            |
+| 5   | Orden y `limit` máximo de `getTokenAccounts` en la DAS                                                 | RF-04     | Probar al implementar RF-04                  |
 
 ---
 
@@ -163,6 +163,53 @@ Al instalar, npm avisó: `@solana-program/token-2022@0.7.0: This package has bee
 La **0.7.0** llegaba como dependencia transitiva de framework-kit (`@solana/client` / `@solana/react-hooks`). Al quitar framework-kit en RF-01.3 desapareció del árbol por completo. La versión vigente **no está deprecada**.
 
 **Para RF-02:** instalar `@solana-program/token-2022@^0.16.1` como dependencia directa. Nada que sustituir; el aviso era ruido heredado del stack antiguo.
+
+### ✅ INCÓGNITA #2 RESUELTA (RT-03.1) — la wallet solo firma; enviamos nosotros
+
+**El riesgo nº 1 del proyecto queda cerrado.** Verificado con Nightly conectada de verdad (cuenta `6MGLK3tStEZcJJdPRhMAMsKUG1z6EUVUKv3yVMVTzRQa`) más lectura del código de las librerías instaladas.
+
+**1. El signer que instala Nightly es de los peligrosos — expone ambas capacidades:**
+
+```jsonc
+{
+  "address": "…",
+  "modifyAndSignTransactions": "fn", // ← firma y devuelve
+  "signAndSendTransactions": "fn", // ← enviaría por SU rpc
+  "modifyAndSignMessages": "fn",
+}
+```
+
+Es simultáneamente `TransactionModifyingSigner` y `TransactionSendingSigner`, y ocupa los roles `payer` **e** `identity` (mismo objeto). Sobre el papel, exactamente el escenario que temía RT-03.
+
+**2. Pero Kit nunca invoca la vía de envío.** Dos comprobaciones encadenadas:
+
+`@solana/kit-plugin-rpc` (0.19.0) solo usa estos dos helpers — `signAndSendTransactionMessageWithSigners` no aparece por ninguna parte:
+
+```
+2  partiallySignTransactionMessageWithSigners
+2  signTransactionMessageWithSigners
+0  signAndSend*
+```
+
+Y en `@solana/signers`, la vía de firma **desactiva explícitamente** la detección de sending signers:
+
+```js
+async function partiallySignTransactionMessageWithSigners(msg, config) {
+  const { partialSigners, modifyingSigners } = categorizeTransactionSigners(
+    deduplicateSigners(getSignersFromTransactionMessage(msg).filter(isTransactionSigner)),
+    { identifySendingSigner: false }, // ← aquí está la garantía
+  );
+  …
+}
+```
+
+Con `identifySendingSigner: false`, un signer que tenga ambas capacidades se clasifica como **modifying signer** y se firma por `modifyAndSignTransactions`. Su `signAndSendTransactions` no se llama jamás en este camino.
+
+**Cadena completa:** `client.sendTransaction` → planner → `partiallySignTransactionMessageWithSigners` (sending detection off) → `modifyAndSignTransactions` de Nightly (solo firma) → el executor envía por **nuestro** `rpcUrl`.
+
+**Conclusión: el stack de RT-01 cumple RT-03 por diseño y no hace falta bajar al pipeline manual de `@solana/kit`.** El fallback documentado en RT-03 sigue siendo válido como plan B, pero no se necesita.
+
+> Pendiente RT-03.2: que Nightly **acepte firmar** un blockhash de Cookie Chain en lugar de rechazarlo. Ojo: firmar no cuesta COOK — solo aterrizar la tx lo cuesta. Se puede resolver sin fondos intentando una transferencia mínima: si Nightly firma y el envío falla con "insufficient funds" **devuelto por rpc.cookiescan.io**, quedan probadas las dos cosas a la vez (que firma, y que la tx salió por nuestro RPC y no por el suyo).
 
 ### 🧹 Probe de cadena retirada
 
