@@ -116,7 +116,7 @@ La documentación del propio campo dice que acepta «any wallet-standard `Identi
 
 **Lo que sí se confirma**, y sigue siendo el riesgo principal: el descubrimiento filtra por `uiWallet.chains.includes(chain)`, así que un valor que ninguna wallet anuncia da **lista vacía sin error**. Modo de fallo adicional no documentado en el PRD: las cuentas que no pueden producir signer para esa cadena resuelven a `signer: null` en lugar de lanzar.
 
-> **Pendiente:** corregir RT-02 en `docs/prds/PRD-cookie-bakery.md`. No se toca durante la ejecución del plan (la skill `execute-plan` lo prohíbe); hacerlo al cerrar RF-01.
+> ✅ **Corregido** en el PRD v1.1.1 al cerrar RF-01. Durante la ejecución del plan no se tocó (la skill `execute-plan` lo prohíbe), por eso quedó registrado aquí primero.
 
 ### ✅ INCÓGNITA #1 RESUELTA — `VITE_WALLET_CHAIN=solana:mainnet`
 
@@ -149,6 +149,27 @@ Que `solana:signTransaction` esté disponible confirma que el camino de firma pu
 
 > Nota: `accounts: 0` en la entrada Solana de Nightly (no conectada). Sus entradas de Aptos y Cedra sí traen `accounts: 1`, o sea que la extensión está desbloqueada y funcionando.
 
-### ⚠️ `@solana-program/token-2022` marcado como deprecated
+### ✅ FALSA ALARMA — `@solana-program/token-2022` no está deprecado
 
-Al instalar, npm avisó: `@solana-program/token-2022@0.7.0: This package has been deprecated`. Es un paquete que RT-01 nombra y que RF-02 necesita. Llegó como dependencia transitiva, no directa. **Sin investigar todavía** — resolver cuál es el sustituto antes de empezar RF-02.
+Al instalar, npm avisó: `@solana-program/token-2022@0.7.0: This package has been deprecated`. Investigado:
+
+| Comprobación                                            | Resultado                          |
+| ------------------------------------------------------- | ---------------------------------- |
+| `npm view @solana-program/token-2022@0.7.0 deprecated`  | `This package has been deprecated` |
+| `npm view @solana-program/token-2022@0.16.1 deprecated` | (vacío — **no** deprecada)         |
+| `dist-tags.latest`                                      | `0.16.1`                           |
+| ¿Sigue en `package-lock.json`?                          | **No**, cero coincidencias         |
+
+La **0.7.0** llegaba como dependencia transitiva de framework-kit (`@solana/client` / `@solana/react-hooks`). Al quitar framework-kit en RF-01.3 desapareció del árbol por completo. La versión vigente **no está deprecada**.
+
+**Para RF-02:** instalar `@solana-program/token-2022@^0.16.1` como dependencia directa. Nada que sustituir; el aviso era ruido heredado del stack antiguo.
+
+### 🧹 Probe de cadena retirada
+
+`src/dev/ChainProbe.tsx` y el `?probe` de `main.tsx` se eliminaron una vez fijado `VITE_WALLET_CHAIN`: eran artefactos de desarrollo que se colaban en el bundle de producción. Si Cookie Chain publicase algún día identificador propio y hubiera que repetir el sondeo, están en el historial de git:
+
+```bash
+git show 555f918 -- src/dev/ChainProbe.tsx
+```
+
+La idea clave a conservar si se rehace: enumerar con `getWallets()` de `@wallet-standard/app` (registro **crudo**), nunca con `useWallets(client)`, que filtra justo por la cadena que se quiere descubrir.

@@ -1,7 +1,13 @@
 # PRD — Cookie Bakery
 
 **Token launcher + airdrop tool para Cookie Chain (SVM)**
-Versión 1.1 · 7 sep 2026 · Autor: Carlos Chao · Estado: aprobado para desarrollo
+Versión 1.1.1 · 8 sep 2026 · Autor: Carlos Chao · Estado: aprobado para desarrollo
+
+> **Changelog v1.1.1** — Correcciones tras implementar RF-01 contra las librerías reales:
+>
+> - **RT-02 estaba mal.** Afirmaba que `walletSigner({ chain })` solo acepta los cuatro literales `solana:*`. El tipo instalado acepta cualquier `namespace:reference`. Reescrito con el valor resuelto empíricamente (`solana:mainnet`) y el porqué.
+> - Riesgos de §9 cerrados por sondeo directo a Cookie Chain: Token-2022 **sí** está desplegado (build completo con extensiones), hay **WebSocket**, la **DAS sí tiene holders por mint** y el RPC trae CORS abierto. Detalle en [docs/decisions.md](../decisions.md).
+> - Falsa alarma registrada: el aviso de npm sobre `@solana-program/token-2022` deprecated venía de la versión 0.7.0 que arrastraba framework-kit. Al quitarlo desapareció del árbol; la vigente (0.16.1) no está deprecada.
 
 > **Changelog v1.1** — Se alinea el stack con las recomendaciones oficiales vigentes del skill `solana-dev` (v2.4.0, Solana Foundation): se sustituye framework-kit (`@solana/client` + `@solana/react-hooks`) por el **cliente de plugins de Kit** (`@solana/kit` + `@solana/kit-plugin-rpc` + `@solana/kit-plugin-wallet`) con bindings `@solana/react`. Esto reescribe RT-01, RT-03, RT-05 y la sección 6, y ajusta detalles de API en RF-01…RF-05. El alcance funcional (RF-01…RF-07) **no cambia**.
 
@@ -209,7 +215,11 @@ export function Providers({ children }: PropsWithChildren) {
 - RPC: `https://rpc.cookiescan.io` (configurable por `VITE_RPC_URL`). WebSocket: `solanaRpc` deriva el `wss://` del mismo host (`http`→`ws`); si Cookie Chain no expone WS, pasar `rpcSubscriptionsUrl` explícito o degradar a polling y **no** usar `useTrackedData*` para el balance.
 - Explorer: `https://cookiescan.io`. DAS: `https://api.cookiescan.io`.
 - Token nativo COOK con 9 decimales (mismo formato que SOL/lamports), así que los helpers `lamportsToSol` / `solToLamports` de Kit aplican tal cual.
-- **Identificador de cadena (Wallet Standard):** `walletSigner({ chain })` solo acepta `solana:mainnet | solana:devnet | solana:testnet | solana:localnet`, y `useWallets(client)` **filtra las wallets por esa cadena**. Cookie Chain no tiene identificador propio: hay que descubrir cuál anuncia Nightly (previsiblemente `solana:mainnet`) y fijarlo en `VITE_WALLET_CHAIN`. Si se pasa el valor equivocado, la lista de wallets sale **vacía** sin error. Verificar en la spike de fase 1 y documentarlo en `docs/decisions.md`.
+- **Identificador de cadena (Wallet Standard): `VITE_WALLET_CHAIN=solana:mainnet`** — resuelto empíricamente en la spike RF-01.1, ver [docs/decisions.md](../decisions.md).
+  - `walletSigner({ chain })` acepta **cualquier** identificador `namespace:reference`, no solo los cuatro literales `solana:*`: el tipo instalado es `SolanaChain | (IdentifierString & {})` y el plugin es chain-agnostic en runtime. _(Corregido en v1.1.1; la versión anterior de este punto afirmaba lo contrario.)_
+  - Ninguna wallet anuncia identificador propio de Cookie Chain. Nightly expone `solana:mainnet`, `solana:mainnet-beta`, `solana:testnet` y `solana:devnet` para Solana, así que la cadena se direcciona como Solana.
+  - Se elige `solana:mainnet` y **no** `mainnet-beta`: este último solo lo anuncia Nightly, y usarlo dejaría fuera a Phantom, MetaMask y OKX sin ninguna ventaja.
+  - Riesgo que sigue vigente: `useWallets(client)` filtra por `uiWallet.chains.includes(chain)`, así que un valor que ninguna wallet anuncia da **lista vacía sin error**. Además, las cuentas que no puedan producir signer para esa cadena resuelven a `signer: null` en vez de lanzar. Por eso el estado vacío de RF-01.8 nombra la cadena configurada.
 - **No hay testnet documentada.** Se desarrolla contra mainnet con montos mínimos. Recomendado: una wallet de desarrollo separada con poco COOK.
 
 ### RT-03 · Firma vs envío (riesgo principal, validar el día 1)
