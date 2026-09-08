@@ -108,6 +108,24 @@ describe("WalletButton", () => {
     expect(state.disconnect).toHaveBeenCalled();
   });
 
+  it("se muestra el estado vacío solo cuando el descubrimiento terminó y no hay wallets", () => {
+    state.wallets = [];
+    const { rerender } = render(<WalletButton client={client} />);
+    expect(screen.getByTestId("no-wallet-empty-state")).toBeInTheDocument();
+
+    // Still warming up: the fallback wins, no premature "no wallet found".
+    state.ready = false;
+    rerender(<WalletButton client={client} />);
+    expect(screen.queryByTestId("no-wallet-empty-state")).toBeNull();
+    expect(screen.getByTestId("wallet-warmup")).toBeInTheDocument();
+  });
+
+  it("no muestra el estado vacío si hay wallets", () => {
+    state.wallets = [{ name: "Nightly" }];
+    render(<WalletButton client={client} />);
+    expect(screen.queryByTestId("no-wallet-empty-state")).toBeNull();
+  });
+
   it("deshabilita los botones mientras hay una acción en vuelo", () => {
     state.wallets = [{ name: "Nightly" }];
     state.isConnecting = true;

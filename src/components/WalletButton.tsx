@@ -10,6 +10,8 @@ import {
 } from "@solana/kit-plugin-wallet/react";
 import { AddressChip } from "./AddressChip";
 import { CookBalance } from "./CookBalance";
+import { NoWalletEmptyState } from "./NoWalletEmptyState";
+import { chainConfig } from "../lib/chain/config";
 
 const STATUS_LABEL: Record<string, string> = {
   connected: "Connected",
@@ -68,6 +70,8 @@ export function WalletPanel({ client }: { client: ClientWithWallet }) {
             {isDisconnecting ? "Disconnecting…" : "Disconnect"}
           </button>
         </div>
+      ) : wallets.length === 0 ? (
+        <NoWalletEmptyState chain={chainConfig.chain} />
       ) : (
         <ul className="grid list-none gap-3 p-0 sm:grid-cols-2">
           {wallets.map((wallet) => (
