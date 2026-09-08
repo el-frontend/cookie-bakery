@@ -94,3 +94,30 @@ Notas para RF-04:
 | 3   | Si Nightly firma con blockhash de Cookie Chain sin rechazar (RT-03.2)                                       | RF-02+               | Spike de fase 1                                                                  |
 | 4   | Si la extensión `TokenMetadata` de Token-2022 funciona en esta cadena                                       | RF-02                | Crear un mint de prueba en fase 2                                                |
 | 5   | Orden y `limit` máximo de `getTokenAccounts` en la DAS                                                      | RF-04                | Probar al implementar RF-04                                                      |
+
+---
+
+## 2026-09-08 · Erratas del PRD detectadas al implementar
+
+### ❌ RT-02 se equivoca sobre los chain id aceptados
+
+El PRD (RT-02) y la primera versión de `CLAUDE.md` afirman que `walletSigner({ chain })` **solo acepta** `solana:mainnet | solana:devnet | solana:testnet | solana:localnet`. **Es falso.** El tipo instalado (`@solana/kit-plugin-wallet` 0.19.0, `types.d.ts`) es:
+
+```ts
+chain: SolanaChain | (IdentifierString & {});
+```
+
+La documentación del propio campo dice que acepta «any wallet-standard `IdentifierString` shape (`${string}:${string}`) for custom chains or non-Solana L2s» y que el comportamiento en runtime es **chain-agnostic**. El error vino de tomar la lista "Chain Identifiers" del skill `solana-dev` como si fuera el tipo completo, cuando solo enumeraba los literales de `SolanaChain`.
+
+**Consecuencias:**
+
+- Cookie Chain **puede** tener identificador propio (p. ej. `cookie:mainnet`) y sería válido pasarlo. La spike RF-01.1 debe anotar el valor real, no elegir entre cuatro.
+- La validación de `VITE_WALLET_CHAIN` valida **forma**, no lista cerrada (RF-01.2 corregido en consecuencia).
+
+**Lo que sí se confirma**, y sigue siendo el riesgo principal: el descubrimiento filtra por `uiWallet.chains.includes(chain)`, así que un valor que ninguna wallet anuncia da **lista vacía sin error**. Modo de fallo adicional no documentado en el PRD: las cuentas que no pueden producir signer para esa cadena resuelven a `signer: null` en lugar de lanzar.
+
+> **Pendiente:** corregir RT-02 en `docs/prds/PRD-cookie-bakery.md`. No se toca durante la ejecución del plan (la skill `execute-plan` lo prohíbe); hacerlo al cerrar RF-01.
+
+### ⚠️ `@solana-program/token-2022` marcado como deprecated
+
+Al instalar, npm avisó: `@solana-program/token-2022@0.7.0: This package has been deprecated`. Es un paquete que RT-01 nombra y que RF-02 necesita. Llegó como dependencia transitiva, no directa. **Sin investigar todavía** — resolver cuál es el sustituto antes de empezar RF-02.
