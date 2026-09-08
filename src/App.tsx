@@ -1,3 +1,4 @@
+import { NetworkIndicator } from "./components/NetworkIndicator";
 import { WalletButton } from "./components/WalletButton";
 import { client } from "./providers";
 
@@ -17,6 +18,7 @@ export default function App() {
           </p>
         </header>
 
+        <NetworkIndicator />
         <WalletButton client={client} />
       </main>
     </div>
