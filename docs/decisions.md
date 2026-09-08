@@ -87,13 +87,13 @@ Notas para RF-04:
 
 ## Incógnitas todavía abiertas
 
-| #   | Incógnita                                                                                              | Bloquea   | Cómo se resuelve                             |
-| --- | ------------------------------------------------------------------------------------------------------ | --------- | -------------------------------------------- |
-| 1   | ~~Valor correcto de `VITE_WALLET_CHAIN`~~ **RESUELTA** → `solana:mainnet`                              | ~~RF-01~~ | Cerrada por la spike RF-01.1 (ver abajo)     |
-| 2   | ~~Si `client.sendTransaction` delega en `signAndSendTransactions` (RT-03.1)~~ **RESUELTA** → no delega | ~~todo~~  | Cerrada leyendo el código de Kit (ver abajo) |
-| 3   | Si Nightly firma con blockhash de Cookie Chain sin rechazar (RT-03.2)                                  | RF-02+    | Spike de fase 1                              |
-| 4   | Si la extensión `TokenMetadata` de Token-2022 funciona en esta cadena                                  | RF-02     | Crear un mint de prueba en fase 2            |
-| 5   | Orden y `limit` máximo de `getTokenAccounts` en la DAS                                                 | RF-04     | Probar al implementar RF-04                  |
+| #   | Incógnita                                                                                              | Bloquea    | Cómo se resuelve                             |
+| --- | ------------------------------------------------------------------------------------------------------ | ---------- | -------------------------------------------- |
+| 1   | ~~Valor correcto de `VITE_WALLET_CHAIN`~~ **RESUELTA** → `solana:mainnet`                              | ~~RF-01~~  | Cerrada por la spike RF-01.1 (ver abajo)     |
+| 2   | ~~Si `client.sendTransaction` delega en `signAndSendTransactions` (RT-03.1)~~ **RESUELTA** → no delega | ~~todo~~   | Cerrada leyendo el código de Kit (ver abajo) |
+| 3   | ~~Si Nightly firma con blockhash de Cookie Chain (RT-03.2)~~ **RESUELTA** → sí firma                   | ~~RF-02+~~ | Cerrada con una tx real firmada (ver abajo)  |
+| 4   | Si la extensión `TokenMetadata` de Token-2022 funciona en esta cadena                                  | RF-02      | Crear un mint de prueba en fase 2            |
+| 5   | Orden y `limit` máximo de `getTokenAccounts` en la DAS                                                 | RF-04      | Probar al implementar RF-04                  |
 
 ---
 
@@ -210,6 +210,46 @@ Con `identifySendingSigner: false`, un signer que tenga ambas capacidades se cla
 **Conclusión: el stack de RT-01 cumple RT-03 por diseño y no hace falta bajar al pipeline manual de `@solana/kit`.** El fallback documentado en RT-03 sigue siendo válido como plan B, pero no se necesita.
 
 > Pendiente RT-03.2: que Nightly **acepte firmar** un blockhash de Cookie Chain en lugar de rechazarlo. Ojo: firmar no cuesta COOK — solo aterrizar la tx lo cuesta. Se puede resolver sin fondos intentando una transferencia mínima: si Nightly firma y el envío falla con "insufficient funds" **devuelto por rpc.cookiescan.io**, quedan probadas las dos cosas a la vez (que firma, y que la tx salió por nuestro RPC y no por el suyo).
+
+### ✅ INCÓGNITA #3 RESUELTA (RT-03.2) — Nightly firma para Cookie Chain
+
+**RT-03 queda cerrado por completo.** Probado con una transacción real firmada por Nightly (cuenta `6MGLK3tStEZcJJdPRhMAMsKUG1z6EUVUKv3yVMVTzRQa`, saldo 0). Transferencia mínima a uno mismo; no se movió nada y el saldo sigue en 0.
+
+Firma obtenida:
+
+```
+4BEoRsMQ9qdz4wXc4nEopQGv7dMFAceTBtRySZM8KTKWtbGMzuUxgRgmC4ieKDjfuAee4iNJqDvz12sqXXHXs9pD
+```
+
+Que exista firma prueba lo que hacía falta: **Nightly no rechaza un blockhash de Cookie Chain.** Levanta su UI de aprobación normal, con cuenta y fee, y firma.
+
+Y el error de vuelta prueba la otra mitad:
+
+```jsonc
+{
+  "__code": 1, // blockhash expirado
+  "currentBlockHeight": "23578836n",
+  "lastValidBlockHeight": "23578835n",
+}
+```
+
+Esas alturas de bloque son las de **Cookie Chain** (~23,5 M, coherente con el `getSlot` del sondeo). Si la tx hubiera salido por el RPC de Nightly hacia Solana mainnet, las alturas estarían en cientos de millones. **La firma la hace la wallet; el envío sale por nuestro RPC.**
+
+#### ⚠️ Hallazgo operativo: el blockhash caduca mientras el humano aprueba
+
+La tx no falló por fondos: falló por **un solo bloque** de diferencia (`23578836` vs `lastValid 23578835`). El tiempo que tarda una persona en leer y aprobar el prompt de la wallet **se come la ventana de validez del blockhash**.
+
+Consecuencias directas:
+
+- **RF-05.3** (reintento único ante `blockhash-expired`) sube de "por si acaso" a **camino habitual**. Sin él, el primer intento de cualquier usuario que lea el prompt fallará.
+- **RF-03.7** (airdrop por lotes): con N firmas seguidas, los últimos lotes son los que más riesgo tienen. Refuerza pedir blockhash lo más tarde posible y reintentar por lote.
+- Merece medir la ventana real de Cookie Chain al implementar RF-05.
+
+#### Nota de método
+
+Con saldo 0 la wallet **no llega a que le pidan firmar**: `solanaRpc` simula antes para estimar límites de recursos, y la simulación falla con `Attempt to debit an account but found no record of a prior credit` (código `7050003`) — devuelto por rpc.cookiescan.io, otra confirmación de que las lecturas van a nuestra cadena. Para forzar el paso de firma hubo que desactivar temporalmente `skipPreflight` y `transactionConfig.estimateResourceLimits`. **Ya revertido**; el cliente vuelve a simular antes de firmar, que es justo lo que pide el PRD §0.8.
+
+> Bonus: que `solanaRpc` simule antes de firmar cubre gratis el requisito "simula antes de firmar" del PRD. La UI de RF-02.5 solo tiene que mostrar el resultado.
 
 ### 🧹 Probe de cadena retirada
 
