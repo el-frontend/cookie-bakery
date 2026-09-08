@@ -1,3 +1,4 @@
+import type { Address } from "@solana/kit";
 import type { ClientWithWallet } from "@solana/kit-plugin-wallet";
 import {
   useConnect,
@@ -8,6 +9,7 @@ import {
   WalletReadyGate,
 } from "@solana/kit-plugin-wallet/react";
 import { AddressChip } from "./AddressChip";
+import { CookBalance } from "./CookBalance";
 
 const STATUS_LABEL: Record<string, string> = {
   connected: "Connected",
@@ -57,6 +59,7 @@ export function WalletPanel({ client }: { client: ClientWithWallet }) {
           <span data-testid="connected-address">
             <AddressChip address={address as string} />
           </span>
+          <CookBalance address={address as Address} />
           <button
             onClick={() => disconnect()}
             disabled={isDisconnecting}

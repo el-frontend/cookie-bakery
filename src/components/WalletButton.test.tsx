@@ -37,6 +37,14 @@ vi.mock("@solana/kit-plugin-wallet/react", () => ({
   }) => (state.ready ? children : fallback),
 }));
 
+// CookBalance needs a live client; its own suite covers it. Stub it here so
+// this file stays about wallet discovery and connection.
+vi.mock("./CookBalance", () => ({
+  CookBalance: ({ address }: { address: string }) => (
+    <span data-testid="cook-balance-stub">{address}</span>
+  ),
+}));
+
 const { WalletButton } = await import("./WalletButton");
 
 const client = {} as ClientWithWallet;
