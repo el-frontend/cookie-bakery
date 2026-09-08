@@ -36,14 +36,14 @@ Target layout (RT-04): `src/app/` (Bake, Airdrop, Oven, Help), `src/components/`
 
 Per PRD RT-01, aligned with the vendored `solana-dev` skill. **Banned:** `@solana/web3.js` 1.x, `@solana/spl-token`, `@solana/wallet-adapter-*`, and framework-kit (`@solana/client`, `@solana/react-hooks`).
 
-| Layer | Package | Minimum |
-|---|---|---|
-| SDK | `@solana/kit` | v7+ |
-| RPC + tx planner/executor | `@solana/kit-plugin-rpc` | 0.13+ |
-| Wallet Standard | `@solana/kit-plugin-wallet` (+ `/react`) | **0.14+** |
-| React bindings | `@solana/react` | **7.1+** |
-| Data cache | `swr` (via `@solana/react/swr`) — **not** TanStack Query | — |
-| Programs | `@solana-program/{token-2022,token,system,compute-budget,memo}` | — |
+| Layer                     | Package                                                         | Minimum   |
+| ------------------------- | --------------------------------------------------------------- | --------- |
+| SDK                       | `@solana/kit`                                                   | v7+       |
+| RPC + tx planner/executor | `@solana/kit-plugin-rpc`                                        | 0.13+     |
+| Wallet Standard           | `@solana/kit-plugin-wallet` (+ `/react`)                        | **0.14+** |
+| React bindings            | `@solana/react`                                                 | **7.1+**  |
+| Data cache                | `swr` (via `@solana/react/swr`) — **not** TanStack Query        | —         |
+| Programs                  | `@solana-program/{token-2022,token,system,compute-budget,memo}` | —         |
 
 Do not install: `@solana/kit-plugins`, `@solana/kit-plugin-airdrop`, `@solana/kit-plugin-payer`, `@solana/kit-client-*` (deprecated), or `@solana/kit-plugin-instruction-plan` (`solanaRpc` already bundles it).
 
@@ -51,7 +51,7 @@ One client for the app, in `src/providers.tsx`, with `walletSigner` **before** `
 
 ## Closed decisions
 
-- **The wallet only signs; the app sends** (RT-03). `walletSigner()` fills the `payer`/`identity` roles and `solanaRpc({ rpcUrl })` supplies the planner + executor, so `client.sendTransaction` sends through *our* RPC, never the wallet's. This is the whole reason for the stack choice — Cookie Chain is not Solana mainnet, and a wallet-side `signAndSendTransaction` would land on the wrong chain. **Verify in the phase-1 spike** that `walletSigner` doesn't resolve to a `TransactionSendingSigner`; if it does, drop to the manual `@solana/kit` pipeline (`pipe()` + `signTransactionMessageWithSigners` + `sendAndConfirmTransactionFactory`).
+- **The wallet only signs; the app sends** (RT-03). `walletSigner()` fills the `payer`/`identity` roles and `solanaRpc({ rpcUrl })` supplies the planner + executor, so `client.sendTransaction` sends through _our_ RPC, never the wallet's. This is the whole reason for the stack choice — Cookie Chain is not Solana mainnet, and a wallet-side `signAndSendTransaction` would land on the wrong chain. **Verify in the phase-1 spike** that `walletSigner` doesn't resolve to a `TransactionSendingSigner`; if it does, drop to the manual `@solana/kit` pipeline (`pipe()` + `signTransactionMessageWithSigners` + `sendAndConfirmTransactionFactory`).
 - **`walletSigner({ chain })` only accepts `solana:mainnet|devnet|testnet|localnet`**, and `useWallets(client)` filters discovered wallets by it. Cookie Chain has no identifier of its own — a wrong value yields an **empty wallet list with no error**. Keep it in `VITE_WALLET_CHAIN` and pin it during the spike.
 - **Legacy/v0 transactions only.** `rpcTransactionPlanner` throws on `version: 1` (through 0.18.0); v1 buys nothing here.
 - **Mainnet only** — no documented testnet. Minimal amounts, separate dev wallet.
@@ -61,13 +61,13 @@ One client for the app, in `src/providers.tsx`, with `walletSigner` **before** `
 
 ### Network / env
 
-| Var | Value |
-|---|---|
-| `VITE_RPC_URL` | `https://rpc.cookiescan.io` |
-| `VITE_DAS_URL` | `https://api.cookiescan.io` (holders via DAS; fallback `getTokenLargestAccounts`) |
-| `VITE_EXPLORER_URL` | `https://cookiescan.io` |
-| `VITE_BRIDGE_URL` | `https://hyperlane.cookiescan.io` (linked from "insufficient COOK" errors) |
-| `VITE_WALLET_CHAIN` | Wallet Standard chain id Nightly advertises — likely `solana:mainnet` |
+| Var                 | Value                                                                             |
+| ------------------- | --------------------------------------------------------------------------------- |
+| `VITE_RPC_URL`      | `https://rpc.cookiescan.io`                                                       |
+| `VITE_DAS_URL`      | `https://api.cookiescan.io` (holders via DAS; fallback `getTokenLargestAccounts`) |
+| `VITE_EXPLORER_URL` | `https://cookiescan.io`                                                           |
+| `VITE_BRIDGE_URL`   | `https://hyperlane.cookiescan.io` (linked from "insufficient COOK" errors)        |
+| `VITE_WALLET_CHAIN` | Wallet Standard chain id Nightly advertises — likely `solana:mainnet`             |
 
 Native token is **COOK**, 9 decimals, so Kit's `lamportsToSol` / `solToLamports` / `formatDecimalFixedPoint` apply directly. Never divide by `1e9`. Nightly must work; other wallets are best-effort via Wallet Standard discovery.
 
