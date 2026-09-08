@@ -7,6 +7,7 @@ import {
   useWalletStatus,
   WalletReadyGate,
 } from "@solana/kit-plugin-wallet/react";
+import { AddressChip } from "./AddressChip";
 
 const STATUS_LABEL: Record<string, string> = {
   connected: "Connected",
@@ -53,11 +54,8 @@ export function WalletPanel({ client }: { client: ClientWithWallet }) {
 
       {connected ? (
         <div className="flex flex-wrap items-center gap-3 text-sm">
-          <span
-            data-testid="connected-address"
-            className="rounded-lg border border-border-low bg-cream px-3 py-2 font-mono text-xs"
-          >
-            {address}
+          <span data-testid="connected-address">
+            <AddressChip address={address as string} />
           </span>
           <button
             onClick={() => disconnect()}

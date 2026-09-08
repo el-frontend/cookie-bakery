@@ -84,9 +84,14 @@ describe("WalletButton", () => {
     state.status = "connected";
     rerender(<WalletButton client={client} />);
 
+    // Rendered through AddressChip, so the address shows truncated while the
+    // copy button still carries the full value.
     expect(screen.getByTestId("connected-address")).toHaveTextContent(
-      "CookieAddr1111"
+      "Cook…1111"
     );
+    expect(
+      screen.getByRole("button", { name: "Copy address CookieAddr1111" })
+    ).toBeInTheDocument();
     expect(screen.getByTestId("wallet-status")).toHaveTextContent("Connected");
     // The wallet picker is replaced by the connected view.
     expect(screen.queryByRole("button", { name: /Nightly/ })).toBeNull();
