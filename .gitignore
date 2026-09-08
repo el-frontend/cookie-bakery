@@ -1,6 +1,11 @@
 # Dependencies
 node_modules
 
+# Local environment — .env.example IS tracked and is the documented template
+.env
+.env.*
+!.env.example
+
 # Build
 dist
 dist-ssr
