@@ -1,3 +1,4 @@
+import { Bake } from "./app/Bake";
 import { NetworkIndicator } from "./components/NetworkIndicator";
 import { WalletButton } from "./components/WalletButton";
 import { client } from "./providers";
@@ -20,6 +21,7 @@ export default function App() {
 
         <NetworkIndicator />
         <WalletButton client={client} />
+        <Bake client={client} />
       </main>
     </div>
   );
