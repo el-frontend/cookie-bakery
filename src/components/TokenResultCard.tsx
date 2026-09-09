@@ -1,5 +1,6 @@
 import { explorer } from "../lib/chain/explorer";
 import { fromBaseUnits } from "../lib/token/bakeForm";
+import { Button } from "./ui/Button";
 import { truncateAddress } from "../lib/format/address";
 import type { MyToken } from "../store/myTokens";
 
@@ -54,13 +55,13 @@ export function TokenResultCard({
         </div>
       </div>
 
-      <dl className="grid gap-2 rounded-lg border border-border-low bg-cream px-4 py-3 text-sm">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <dt className="text-muted">Mint</dt>
-          <dd>
+      <dl className="flex flex-col rounded-lg border border-border-low bg-bg1 px-[18px]">
+        <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-[#1e1a17] py-3.5">
+          <dt className="text-[13.5px] text-ink-2">Mint</dt>
+          <dd className="min-w-0">
             <a
               data-testid="result-mint-link"
-              className="break-all font-mono text-xs underline underline-offset-2"
+              className="break-all font-mono text-xs underline-offset-2 hover:underline"
               href={explorer.tokenUrl(token.mint)}
               target="_blank"
               rel="noreferrer"
@@ -69,50 +70,104 @@ export function TokenResultCard({
             </a>
           </dd>
         </div>
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <dt className="text-muted">Transaction</dt>
+        <div className="flex flex-wrap items-baseline justify-between gap-3 border-b border-[#1e1a17] py-3.5">
+          <dt className="text-[13.5px] text-ink-2">Transaction</dt>
           <dd>
             <a
               data-testid="result-tx-link"
-              className="font-mono text-xs underline underline-offset-2"
+              className="inline-flex items-center gap-1.5 font-mono text-xs underline-offset-2 hover:underline"
               href={explorer.txUrl(token.signature)}
               target="_blank"
               rel="noreferrer"
             >
               {truncateAddress(token.signature)}
+              <svg
+                width="13"
+                height="13"
+                viewBox="0 0 24 24"
+                fill="none"
+                aria-hidden
+              >
+                <path
+                  d="M14 5h5v5M19 5l-8 8"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                />
+              </svg>
             </a>
           </dd>
         </div>
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <dt className="text-muted">Program</dt>
-          <dd className="font-mono text-xs">
-            {token.program === "token-2022" ? "Token-2022" : "SPL Token"}
+        <div className="flex flex-wrap items-baseline justify-between gap-3 py-3.5">
+          <dt className="text-[13.5px] text-ink-2">Program</dt>
+          <dd>
+            {token.program === "token-2022" ? (
+              <span className="rounded-full bg-accent/12 px-2.5 py-1 text-[11.5px] font-semibold text-accent">
+                Token-2022
+              </span>
+            ) : (
+              <span className="rounded-full bg-raised px-2.5 py-1 text-[11.5px] font-semibold text-ink-2">
+                SPL Token
+              </span>
+            )}
           </dd>
         </div>
       </dl>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="grid grid-cols-2 gap-3">
+        <Button disabled title="Airdrop ships with RF-03">
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden
+          >
+            <path
+              d="M12 3v12M7.5 10.5L12 15l4.5-4.5"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M4.5 18.5h15"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+            />
+          </svg>
+          Airdrop it
+        </Button>
+        <Button disabled title="Oven ships with RF-04" variant="secondary">
+          <svg
+            width="17"
+            height="17"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden
+          >
+            <path
+              d="M4 19V9M10 19V5M16 19v-7M22 19H2"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+            />
+          </svg>
+          View in Oven
+        </Button>
+      </div>
+
+      <div className="flex items-center justify-center gap-1.5 text-[13px] text-ink-3">
+        <span>Saved to</span>
         <button
           data-testid="bake-another"
           onClick={onBakeAnother}
-          className="rounded-lg border border-border-low px-4 py-2 text-sm font-medium transition hover:shadow-sm"
+          className="font-semibold text-ink-2 underline underline-offset-2 transition-colors duration-[160ms] [transition-timing-function:var(--ease-strong-out)] hover:text-ink"
         >
-          Bake another
+          My tokens
         </button>
-        <button
-          disabled
-          title="Airdrop ships with RF-03"
-          className="rounded-lg border border-border-low px-4 py-2 text-sm font-medium opacity-50"
-        >
-          Go to Airdrop
-        </button>
-        <button
-          disabled
-          title="Oven ships with RF-04"
-          className="rounded-lg border border-border-low px-4 py-2 text-sm font-medium opacity-50"
-        >
-          View in Oven
-        </button>
+        <span>on this device · bake another</span>
       </div>
     </section>
   );
