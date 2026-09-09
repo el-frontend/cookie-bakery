@@ -290,10 +290,14 @@ export function Bake({ client }: { client: AppClient }) {
           balance={lamports}
           cost={cost}
           decimals={values.decimals}
+          freezeRevoked={advanced.revokeFreezeAuthority}
           isPlanning={isPlanning}
           isSending={tracked.isRunning}
           mint={mintSigner?.address ?? null}
+          mintRevoked={advanced.revokeMintAuthority}
+          name={values.name.trim()}
           onSubmit={() => void submit()}
+          program={advanced.program}
           simulationError={simulationError}
           supply={values.supply}
           symbol={values.symbol.trim()}

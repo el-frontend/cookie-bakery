@@ -22,10 +22,14 @@ function props(overrides: Partial<BakeSummaryProps> = {}): BakeSummaryProps {
     balance: 100_000_000n as Lamports,
     cost: COST,
     decimals: 6,
+    freezeRevoked: true,
     isPlanning: false,
     isSending: false,
     mint: MINT,
+    mintRevoked: false,
+    name: "Bakery Cookie",
     onSubmit: vi.fn(),
+    program: "token-2022",
     simulationError: null,
     supply: "1000000",
     symbol: "BAKE",
@@ -51,9 +55,25 @@ describe("BakeSummary", () => {
     render(<BakeSummary {...props()} />);
 
     expect(screen.getByTestId("summary-mint")).toHaveTextContent("9xQe");
-    expect(screen.getByTestId("summary-supply")).toHaveTextContent(
-      "1000000 BAKE"
-    );
+    // The symbol now sits on the identity line, so the supply figure stands
+    // alone under a big display face.
+    expect(screen.getByTestId("summary-supply")).toHaveTextContent("1000000");
+    expect(screen.getByText(/BAKE · 6 decimals/)).toBeInTheDocument();
+  });
+
+  it("muestra la identidad del token y las autoridades", () => {
+    render(<BakeSummary {...props()} />);
+
+    expect(screen.getByText("Bakery Cookie")).toBeInTheDocument();
+    expect(screen.getByText(/BAKE · 6 decimals/)).toBeInTheDocument();
+    expect(screen.getByText("Token-2022")).toBeInTheDocument();
+    expect(screen.getByText(/Freeze revoked · mint kept/)).toBeInTheDocument();
+  });
+
+  it("etiqueta el programa clásico como SPL Token", () => {
+    render(<BakeSummary {...props({ program: "token" })} />);
+    expect(screen.getByText("SPL Token")).toBeInTheDocument();
+    expect(screen.queryByText("Token-2022")).not.toBeInTheDocument();
   });
 
   it("bloquea el envío con saldo insuficiente", async () => {
