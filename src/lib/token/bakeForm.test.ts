@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_BAKE_FORM,
   isBakeFormValid,
+  fromBaseUnits,
   toBaseUnits,
   validateBakeForm,
   type BakeFormValues,
@@ -109,5 +110,32 @@ describe("validateBakeForm", () => {
     const errors = validateBakeForm({ ...VALID, decimals: 99, supply: "1.5" });
     expect(errors.decimals).toBeDefined();
     expect(errors.supply).toBeUndefined();
+  });
+});
+
+describe("fromBaseUnits", () => {
+  it("es el inverso exacto de toBaseUnits", () => {
+    for (const [amount, decimals] of [
+      ["1000000", 6],
+      ["0.1", 9],
+      ["1000", 0],
+      ["123.456789", 6],
+    ] as const) {
+      expect(fromBaseUnits(toBaseUnits(amount, decimals), decimals)).toBe(
+        amount
+      );
+    }
+  });
+
+  it("no pierde precisión más allá de Number.MAX_SAFE_INTEGER", () => {
+    // 1e9 tokens with 9 decimals is 1e18 base units — well past 2^53.
+    const huge = toBaseUnits("1000000000", 9);
+    expect(huge).toBe(1_000_000_000_000_000_000n);
+    expect(fromBaseUnits(huge, 9)).toBe("1000000000");
+  });
+
+  it("recorta los ceros de la fracción", () => {
+    expect(fromBaseUnits(1_500_000n, 6)).toBe("1.5");
+    expect(fromBaseUnits(1_000_000n, 6)).toBe("1");
   });
 });

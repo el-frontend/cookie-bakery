@@ -106,3 +106,19 @@ export function validateBakeForm(values: BakeFormValues): FieldErrors {
 export function isBakeFormValid(values: BakeFormValues): boolean {
   return Object.keys(validateBakeForm(values)).length === 0;
 }
+
+/**
+ * Inverse of {@link toBaseUnits}: renders base units back as a human amount.
+ * String arithmetic again — a supply of 1e9 with 9 decimals is 1e18 base
+ * units, far past what Number can hold exactly.
+ */
+export function fromBaseUnits(amount: bigint, decimals: number): string {
+  if (decimals === 0) return amount.toString();
+  const divisor = 10n ** BigInt(decimals);
+  const whole = (amount / divisor).toString();
+  const fraction = (amount % divisor)
+    .toString()
+    .padStart(decimals, "0")
+    .replace(/0+$/, "");
+  return fraction ? `${whole}.${fraction}` : whole;
+}
