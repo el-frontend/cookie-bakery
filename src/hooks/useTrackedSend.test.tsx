@@ -125,6 +125,22 @@ describe("useTrackedSend", () => {
     expect(result.current.signature).toBe("PLAINSIG");
   });
 
+  it("lee la firma de un SingleTransactionPlanResult de Kit", async () => {
+    // The shape client.sendTransaction actually resolves with: the signature
+    // lives under `status`, not at the top level.
+    const send = vi.fn().mockResolvedValue({
+      kind: "single",
+      message: {},
+      status: { context: {}, kind: "successful", signature: "PLANSIG" },
+    });
+    const { result } = renderHook(() => useTrackedSend(send), { wrapper });
+
+    await act(async () => {
+      await result.current.dispatch();
+    });
+    expect(result.current.signature).toBe("PLANSIG");
+  });
+
   it("pasa los argumentos al send", async () => {
     const send = vi.fn().mockResolvedValue("SIG");
     const { result } = renderHook(() => useTrackedSend(send), { wrapper });

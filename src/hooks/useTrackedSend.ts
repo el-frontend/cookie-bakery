@@ -3,9 +3,13 @@ import { mapError } from "../lib/errors/mapError";
 import type { MappedError } from "../lib/errors/types";
 import { useToast } from "./useToast";
 
+/**
+ * Any send. The result is normalized by `readSignature`, so callers can pass
+ * `client.sendTransaction` and friends directly without adapting their shape.
+ */
 export type SendFn<TArgs extends unknown[]> = (
   ...args: TArgs
-) => Promise<{ signature?: string } | string | void>;
+) => Promise<unknown>;
 
 export type TrackedSendState = {
   error: MappedError | null;
@@ -14,14 +18,24 @@ export type TrackedSendState = {
   signature: string | null;
 };
 
+/**
+ * Pulls the signature out of whatever the send returned.
+ *
+ * Kit's transaction plan executors resolve with a
+ * `SingleTransactionPlanResult`, which carries the signature at
+ * `status.signature` — NOT at the top level. Miss that and every real send
+ * reports a null signature: no explorer link on the toast, and callers that
+ * key off the signature treat a confirmed transaction as a failure.
+ */
 function readSignature(result: unknown): string | null {
   if (typeof result === "string") return result;
   if (result && typeof result === "object") {
     const r = result as {
       context?: { signature?: unknown };
       signature?: unknown;
+      status?: { signature?: unknown };
     };
-    const sig = r.signature ?? r.context?.signature;
+    const sig = r.signature ?? r.status?.signature ?? r.context?.signature;
     if (typeof sig === "string") return sig;
   }
   return null;
