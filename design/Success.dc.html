@@ -1,0 +1,471 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        />
+        <style>
+          * {
+            box-sizing: border-box;
+          }
+          body {
+            margin: 0;
+            background: #0f0d0b;
+            color: #f5f0e8;
+            font-family: "Instrument Sans", system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+          }
+          a {
+            color: #e8a33d;
+            text-decoration: none;
+          }
+          a:hover {
+            color: #f2b457;
+          }
+          ::placeholder {
+            color: #6e665c;
+          }
+        </style>
+      </helmet>
+
+      <div
+        style="
+          width: 1280px;
+          height: 880px;
+          background: #0f0d0b;
+          background-image: radial-gradient(
+            900px 420px at 50% -8%,
+            rgba(232, 163, 61, 0.1),
+            transparent 70%
+          );
+          display: flex;
+          flex-direction: column;
+        "
+      >
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            padding: 18px 32px;
+            border-bottom: 1px solid #211d19;
+          "
+        >
+          <div style="display: flex; align-items: center; gap: 10px">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="12"
+                cy="12"
+                r="9.25"
+                stroke="#E8A33D"
+                stroke-width="1.5"
+              />
+              <circle cx="9.2" cy="9.6" r="1.35" fill="#E8A33D" />
+              <circle cx="14.6" cy="12.4" r="1.1" fill="#E8A33D" />
+              <circle cx="10" cy="15.2" r="1" fill="#E8A33D" />
+            </svg>
+            <span
+              style="
+                font-family: &quot;Bricolage Grotesque&quot;, system-ui;
+                font-size: 17px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+              "
+              >Cookie Bakery</span
+            >
+          </div>
+
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              padding: 4px;
+              background: #171412;
+              border: 1px solid #241f1b;
+              border-radius: 999px;
+            "
+          >
+            <span
+              style="
+                padding: 8px 18px;
+                border-radius: 999px;
+                background: #e8a33d;
+                color: #1a1410;
+                font-size: 13.5px;
+                font-weight: 600;
+              "
+              >Bake</span
+            ><span
+              style="
+                padding: 8px 18px;
+                border-radius: 999px;
+                color: #a39b8f;
+                font-size: 13.5px;
+                font-weight: 500;
+              "
+              >Airdrop</span
+            ><span
+              style="
+                padding: 8px 18px;
+                border-radius: 999px;
+                color: #a39b8f;
+                font-size: 13.5px;
+                font-weight: 500;
+              "
+              >Oven</span
+            >
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                padding: 8px 12px;
+                background: #171412;
+                border: 1px solid #241f1b;
+                border-radius: 10px;
+              "
+            >
+              <span
+                style="
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 999px;
+                  background: #5fbf8c;
+                  box-shadow: 0 0 0 3px rgba(95, 191, 140, 0.16);
+                "
+              ></span>
+              <span style="font-size: 12.5px; color: #a39b8f; font-weight: 500"
+                >Cookie Chain</span
+              >
+              <span
+                style="
+                  font-family: &quot;JetBrains Mono&quot;, monospace;
+                  font-size: 11.5px;
+                  color: #8c8377;
+                "
+                >1052ms</span
+              >
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 9px;
+                padding: 7px 8px 7px 12px;
+                background: #171412;
+                border: 1px solid #241f1b;
+                border-radius: 10px;
+              "
+            >
+              <span
+                style="
+                  font-family: &quot;JetBrains Mono&quot;, monospace;
+                  font-size: 12.5px;
+                  color: #f5f0e8;
+                "
+                >6MGL&#8230;zRQa</span
+              >
+              <span
+                style="
+                  padding: 4px 9px;
+                  background: #1e1a17;
+                  border-radius: 6px;
+                  font-size: 11.5px;
+                  font-weight: 600;
+                  color: #e8a33d;
+                  font-variant-numeric: tabular-nums;
+                "
+                >5,140.46 COOK</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div
+          style="
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            padding: 44px 32px;
+            overflow: hidden;
+          "
+        >
+          <div
+            style="
+              width: 560px;
+              display: flex;
+              flex-direction: column;
+              gap: 22px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 16px;
+                padding: 30px 24px 26px;
+                background: #171412;
+                border: 1px solid #241f1b;
+                border-radius: 22px;
+                background-image: radial-gradient(
+                  420px 180px at 50% 0%,
+                  rgba(95, 191, 140, 0.1),
+                  transparent 72%
+                );
+              "
+            >
+              <div
+                style="
+                  width: 62px;
+                  height: 62px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  background: rgba(95, 191, 140, 0.12);
+                  border: 1px solid rgba(95, 191, 140, 0.28);
+                  border-radius: 20px;
+                "
+              >
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M5 12.5l4.5 4.5L19 7.5"
+                    stroke="#5FBF8C"
+                    stroke-width="2.1"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  gap: 6px;
+                  text-align: center;
+                "
+              >
+                <h1
+                  style="
+                    margin: 0;
+                    font-family: &quot;Bricolage Grotesque&quot;, system-ui;
+                    font-size: 28px;
+                    font-weight: 700;
+                    letter-spacing: -0.03em;
+                  "
+                >
+                  Bakery Cookie is live
+                </h1>
+                <p style="margin: 0; font-size: 14px; color: #a39b8f">
+                  1,000,000 BAKE minted to your token account in 1.8s
+                </p>
+              </div>
+            </div>
+
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                padding: 4px 22px;
+                background: #171412;
+                border: 1px solid #241f1b;
+                border-radius: 20px;
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  gap: 16px;
+                  padding: 16px 0;
+                  border-bottom: 1px solid #1e1a17;
+                "
+              >
+                <span style="font-size: 13.5px; color: #a39b8f">Mint</span>
+                <div style="display: flex; align-items: center; gap: 8px">
+                  <span
+                    style="
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 12.5px;
+                      color: #f5f0e8;
+                    "
+                    >856TqPXn3kR2vY8mLwHc9fBzUa4Nd7eSdGt</span
+                  >
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                    <rect
+                      x="9"
+                      y="9"
+                      width="11"
+                      height="11"
+                      rx="2.2"
+                      stroke="#6E665C"
+                      stroke-width="1.6"
+                    />
+                    <path
+                      d="M15 6.5A2.5 2.5 0 0012.5 4h-6A2.5 2.5 0 004 6.5v6A2.5 2.5 0 006.5 15"
+                      stroke="#6E665C"
+                      stroke-width="1.6"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  padding: 16px 0;
+                  border-bottom: 1px solid #1e1a17;
+                "
+              >
+                <span style="font-size: 13.5px; color: #a39b8f"
+                  >Transaction</span
+                >
+                <a
+                  href="#"
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 7px;
+                    font-family: &quot;JetBrains Mono&quot;, monospace;
+                    font-size: 12.5px;
+                  "
+                  >4BEoRs&#8230;zuUxg
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M14 5h5v5M19 5l-8 8"
+                      stroke="#E8A33D"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                    />
+                    <path
+                      d="M18 14v4a2 2 0 01-2 2H6a2 2 0 01-2-2V8a2 2 0 012-2h4"
+                      stroke="#E8A33D"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </a>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  padding: 16px 0;
+                "
+              >
+                <span style="font-size: 13.5px; color: #a39b8f">Program</span>
+                <span
+                  style="
+                    padding: 4px 10px;
+                    background: rgba(232, 163, 61, 0.12);
+                    border-radius: 999px;
+                    font-size: 11.5px;
+                    font-weight: 600;
+                    color: #e8a33d;
+                  "
+                  >Token-2022</span
+                >
+              </div>
+            </div>
+
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 12px;
+              "
+            >
+              <div
+                style="
+                  height: 50px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  gap: 9px;
+                  background: #e8a33d;
+                  border-radius: 14px;
+                  color: #1a1410;
+                  font-size: 14.5px;
+                  font-weight: 700;
+                "
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M12 3v12M7.5 10.5L12 15l4.5-4.5"
+                    stroke="#1A1410"
+                    stroke-width="1.9"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                  <path
+                    d="M4.5 18.5h15"
+                    stroke="#1A1410"
+                    stroke-width="1.9"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                Airdrop it
+              </div>
+              <div
+                style="
+                  height: 50px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  gap: 9px;
+                  background: #1e1a17;
+                  border: 1px solid #2a2521;
+                  border-radius: 14px;
+                  color: #f5f0e8;
+                  font-size: 14.5px;
+                  font-weight: 600;
+                "
+              >
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                  <path
+                    d="M4 19V9M10 19V5M16 19v-7M22 19H2"
+                    stroke="#F5F0E8"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                  />
+                </svg>
+                View in Oven
+              </div>
+            </div>
+
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 7px;
+                font-size: 13px;
+                color: #8c8377;
+              "
+            >
+              <span>Saved to</span
+              ><span style="color: #a39b8f; font-weight: 600">My tokens</span
+              ><span>on this device</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+  </body>
+</html>

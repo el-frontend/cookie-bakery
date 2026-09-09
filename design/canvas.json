@@ -1,0 +1,137 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Escritorio" },
+    { "id": "page-2", "name": "Móvil" },
+    { "id": "page-3", "name": "Fundamentos" }
+  ],
+  "artboards": [
+    {
+      "file": "Connect.dc.html",
+      "page": "page-1",
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 880,
+      "title": "01 · Conectar wallet"
+    },
+    {
+      "file": "Main.dc.html",
+      "page": "page-1",
+      "x": 1400,
+      "y": 0,
+      "w": 1280,
+      "h": 880,
+      "title": "02 · Bake · formulario"
+    },
+    {
+      "file": "Review.dc.html",
+      "page": "page-1",
+      "x": 2800,
+      "y": 0,
+      "w": 1280,
+      "h": 880,
+      "title": "03 · Antes de firmar"
+    },
+    {
+      "file": "Success.dc.html",
+      "page": "page-1",
+      "x": 4200,
+      "y": 0,
+      "w": 1280,
+      "h": 880,
+      "title": "04 · Token creado"
+    },
+    {
+      "file": "MyTokens.dc.html",
+      "page": "page-1",
+      "x": 0,
+      "y": 1060,
+      "w": 1280,
+      "h": 880,
+      "title": "05 · Mis tokens"
+    },
+    {
+      "file": "Airdrop.dc.html",
+      "page": "page-1",
+      "x": 1400,
+      "y": 1060,
+      "w": 1280,
+      "h": 880,
+      "title": "06 · Airdrop · RF-03"
+    },
+    {
+      "file": "Oven.dc.html",
+      "page": "page-1",
+      "x": 2800,
+      "y": 1060,
+      "w": 1280,
+      "h": 880,
+      "title": "07 · Oven · RF-04"
+    },
+
+    {
+      "file": "MobileBake.dc.html",
+      "page": "page-2",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Bake"
+    },
+    {
+      "file": "MobileReview.dc.html",
+      "page": "page-2",
+      "x": 500,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Antes de firmar"
+    },
+    {
+      "file": "MobileSuccess.dc.html",
+      "page": "page-2",
+      "x": 1000,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Token creado"
+    },
+
+    {
+      "file": "Foundations.dc.html",
+      "page": "page-3",
+      "x": 0,
+      "y": 0,
+      "w": 1280,
+      "h": 880,
+      "title": "Sistema visual"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "flujo",
+      "page": "page-1",
+      "x": 0,
+      "y": -150,
+      "w": 520,
+      "text": "Flujo Bake, de izquierda a derecha.\nUn solo acento caramelo #E8A33D sobre negro cálido #0F0D0B.\nLa fila de abajo son las tres secciones de la app."
+    },
+    {
+      "id": "movil",
+      "page": "page-2",
+      "x": 0,
+      "y": -150,
+      "w": 520,
+      "text": "390×844. Sin barra de estado ni teclado falsos: en un teléfono real los pinta el sistema encima.\nTodos los targets ≥ 44px."
+    },
+    {
+      "id": "grafico",
+      "page": "page-1",
+      "x": 2800,
+      "y": 1980,
+      "w": 560,
+      "text": "La distribución de holders usa UNA sola tonalidad, no once colores: es magnitud de una serie, no once identidades. «Other» va en neutro.\nBarras horizontales porque las etiquetas son direcciones largas."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}

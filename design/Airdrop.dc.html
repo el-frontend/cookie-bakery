@@ -1,0 +1,982 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        />
+        <style>
+          * {
+            box-sizing: border-box;
+          }
+          body {
+            margin: 0;
+            background: #0f0d0b;
+            color: #f5f0e8;
+            font-family: "Instrument Sans", system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+          }
+          a {
+            color: #e8a33d;
+            text-decoration: none;
+          }
+          a:hover {
+            color: #f2b457;
+          }
+          ::placeholder {
+            color: #6e665c;
+          }
+        </style>
+      </helmet>
+
+      <div
+        style="
+          width: 1280px;
+          height: 880px;
+          background: #0f0d0b;
+          background-image: radial-gradient(
+            900px 420px at 50% -8%,
+            rgba(232, 163, 61, 0.1),
+            transparent 70%
+          );
+          display: flex;
+          flex-direction: column;
+        "
+      >
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            padding: 18px 32px;
+            border-bottom: 1px solid #211d19;
+          "
+        >
+          <div style="display: flex; align-items: center; gap: 10px">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="12"
+                cy="12"
+                r="9.25"
+                stroke="#E8A33D"
+                stroke-width="1.5"
+              />
+              <circle cx="9.2" cy="9.6" r="1.35" fill="#E8A33D" />
+              <circle cx="14.6" cy="12.4" r="1.1" fill="#E8A33D" />
+              <circle cx="10" cy="15.2" r="1" fill="#E8A33D" />
+            </svg>
+            <span
+              style="
+                font-family: &quot;Bricolage Grotesque&quot;, system-ui;
+                font-size: 17px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+              "
+              >Cookie Bakery</span
+            >
+          </div>
+
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              padding: 4px;
+              background: #171412;
+              border: 1px solid #241f1b;
+              border-radius: 999px;
+            "
+          >
+            <span
+              style="
+                padding: 8px 18px;
+                border-radius: 999px;
+                color: #a39b8f;
+                font-size: 13.5px;
+                font-weight: 500;
+              "
+              >Bake</span
+            ><span
+              style="
+                padding: 8px 18px;
+                border-radius: 999px;
+                background: #e8a33d;
+                color: #1a1410;
+                font-size: 13.5px;
+                font-weight: 600;
+              "
+              >Airdrop</span
+            ><span
+              style="
+                padding: 8px 18px;
+                border-radius: 999px;
+                color: #a39b8f;
+                font-size: 13.5px;
+                font-weight: 500;
+              "
+              >Oven</span
+            >
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 7px;
+                padding: 8px 12px;
+                background: #171412;
+                border: 1px solid #241f1b;
+                border-radius: 10px;
+              "
+            >
+              <span
+                style="
+                  width: 6px;
+                  height: 6px;
+                  border-radius: 999px;
+                  background: #5fbf8c;
+                  box-shadow: 0 0 0 3px rgba(95, 191, 140, 0.16);
+                "
+              ></span>
+              <span style="font-size: 12.5px; color: #a39b8f; font-weight: 500"
+                >Cookie Chain</span
+              >
+              <span
+                style="
+                  font-family: &quot;JetBrains Mono&quot;, monospace;
+                  font-size: 11.5px;
+                  color: #8c8377;
+                "
+                >1052ms</span
+              >
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 9px;
+                padding: 7px 8px 7px 12px;
+                background: #171412;
+                border: 1px solid #241f1b;
+                border-radius: 10px;
+              "
+            >
+              <span
+                style="
+                  font-family: &quot;JetBrains Mono&quot;, monospace;
+                  font-size: 12.5px;
+                  color: #f5f0e8;
+                "
+                >6MGL&#8230;zRQa</span
+              >
+              <span
+                style="
+                  padding: 4px 9px;
+                  background: #1e1a17;
+                  border-radius: 6px;
+                  font-size: 11.5px;
+                  font-weight: 600;
+                  color: #e8a33d;
+                  font-variant-numeric: tabular-nums;
+                "
+                >5,140.46 COOK</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <div
+          style="
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            padding: 34px 32px;
+            overflow: hidden;
+          "
+        >
+          <div style="width: 1080px; display: flex; gap: 20px">
+            <div
+              style="
+                width: 660px;
+                display: flex;
+                flex-direction: column;
+                gap: 18px;
+              "
+            >
+              <div style="display: flex; flex-direction: column; gap: 6px">
+                <h1
+                  style="
+                    margin: 0;
+                    font-family: &quot;Bricolage Grotesque&quot;, system-ui;
+                    font-size: 30px;
+                    font-weight: 700;
+                    letter-spacing: -0.03em;
+                  "
+                >
+                  Airdrop
+                </h1>
+                <p style="margin: 0; font-size: 14px; color: #8c8377">
+                  Paste
+                  <span
+                    style="
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      color: #a39b8f;
+                    "
+                    >address,amount</span
+                  >
+                  or drop a CSV &#183; up to 1,000 rows
+                </p>
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  padding: 14px 16px;
+                  background: #171412;
+                  border: 1px solid #241f1b;
+                  border-radius: 16px;
+                "
+              >
+                <div
+                  style="
+                    width: 38px;
+                    height: 38px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: linear-gradient(145deg, #e8a33d, #c9781f);
+                    border-radius: 12px;
+                    font-family: &quot;Bricolage Grotesque&quot;, system-ui;
+                    font-size: 13px;
+                    font-weight: 800;
+                    color: #1a1410;
+                  "
+                >
+                  BA
+                </div>
+                <div
+                  style="
+                    flex-grow: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                  "
+                >
+                  <span style="font-size: 14px; font-weight: 600"
+                    >Bakery Cookie &#183; BAKE</span
+                  >
+                  <span
+                    style="
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 11.5px;
+                      color: #8c8377;
+                    "
+                    >856TqPXn&#8230;Nd7eSdGt &#183; balance 1,000,000</span
+                  >
+                </div>
+                <span
+                  style="
+                    padding: 7px 14px;
+                    background: #1e1a17;
+                    border: 1px solid #2a2521;
+                    border-radius: 10px;
+                    font-size: 12.5px;
+                    font-weight: 600;
+                    color: #a39b8f;
+                  "
+                  >Change</span
+                >
+              </div>
+
+              <div
+                style="
+                  flex-grow: 1;
+                  display: flex;
+                  flex-direction: column;
+                  background: #171412;
+                  border: 1px solid #241f1b;
+                  border-radius: 18px;
+                  overflow: hidden;
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    padding: 12px 12px;
+                    border-bottom: 1px solid #241f1b;
+                  "
+                >
+                  <span
+                    style="
+                      width: 26px;
+                      font-size: 11px;
+                      font-weight: 600;
+                      letter-spacing: 0.06em;
+                      text-transform: uppercase;
+                      color: #6e665c;
+                    "
+                    >#</span
+                  >
+                  <span
+                    style="
+                      flex-grow: 1;
+                      font-size: 11px;
+                      font-weight: 600;
+                      letter-spacing: 0.06em;
+                      text-transform: uppercase;
+                      color: #6e665c;
+                    "
+                    >Recipient</span
+                  >
+                  <span style="width: 80px"></span>
+                  <span
+                    style="
+                      width: 110px;
+                      text-align: right;
+                      font-size: 11px;
+                      font-weight: 600;
+                      letter-spacing: 0.06em;
+                      text-transform: uppercase;
+                      color: #6e665c;
+                    "
+                    >Amount</span
+                  >
+                  <span
+                    style="
+                      width: 116px;
+                      text-align: right;
+                      font-size: 11px;
+                      font-weight: 600;
+                      letter-spacing: 0.06em;
+                      text-transform: uppercase;
+                      color: #6e665c;
+                    "
+                    >Status</span
+                  >
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    padding: 11px 12px;
+                    border-bottom: 1px solid #1e1a17;
+                  "
+                >
+                  <span
+                    style="
+                      width: 26px;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 12px;
+                      color: #6e665c;
+                    "
+                    >1</span
+                  >
+                  <span
+                    style="
+                      flex-grow: 1;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 12.5px;
+                      color: #f5f0e8;
+                    "
+                    >7pKfR2mNvQ8xLwHc9fBzUa4Nd7eSdGtY3jM</span
+                  >
+                  <span style="width: 80px"
+                    ><span style="font-size: 12px; color: #6e665c"
+                      >ATA exists</span
+                    ></span
+                  >
+                  <span
+                    style="
+                      width: 110px;
+                      text-align: right;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 13px;
+                      font-variant-numeric: tabular-nums;
+                    "
+                    >12,500</span
+                  >
+                  <span style="width: 116px; text-align: right"
+                    ><span
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        font-size: 12.5px;
+                        color: #5fbf8c;
+                      "
+                      ><svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M5 12.5l4.5 4.5L19 7.5"
+                          stroke="#5FBF8C"
+                          stroke-width="2.2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        /></svg
+                      >Valid</span
+                    ></span
+                  >
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    padding: 11px 12px;
+                    border-bottom: 1px solid #1e1a17;
+                  "
+                >
+                  <span
+                    style="
+                      width: 26px;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 12px;
+                      color: #6e665c;
+                    "
+                    >2</span
+                  >
+                  <span
+                    style="
+                      flex-grow: 1;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 12.5px;
+                      color: #f5f0e8;
+                    "
+                    >3xQvR9LmKp2WbYzT8nHgD4sVc6RfXeAu1Bq</span
+                  >
+                  <span style="width: 80px"
+                    ><span
+                      style="
+                        padding: 3px 8px;
+                        background: rgba(232, 163, 61, 0.12);
+                        border-radius: 6px;
+                        font-size: 11px;
+                        font-weight: 600;
+                        color: #e8a33d;
+                      "
+                      >+ ATA</span
+                    ></span
+                  >
+                  <span
+                    style="
+                      width: 110px;
+                      text-align: right;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 13px;
+                      font-variant-numeric: tabular-nums;
+                    "
+                    >8,000</span
+                  >
+                  <span style="width: 116px; text-align: right"
+                    ><span
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        font-size: 12.5px;
+                        color: #5fbf8c;
+                      "
+                      ><svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M5 12.5l4.5 4.5L19 7.5"
+                          stroke="#5FBF8C"
+                          stroke-width="2.2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        /></svg
+                      >Valid</span
+                    ></span
+                  >
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    padding: 11px 12px;
+                    border-bottom: 1px solid #1e1a17;
+                  "
+                >
+                  <span
+                    style="
+                      width: 26px;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 12px;
+                      color: #6e665c;
+                    "
+                    >3</span
+                  >
+                  <span
+                    style="
+                      flex-grow: 1;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 12.5px;
+                      color: #f5f0e8;
+                    "
+                    >9fBzUa4NR2vY8mLwHc7pKfQ3jMnGtS5dEwX</span
+                  >
+                  <span style="width: 80px"
+                    ><span style="font-size: 12px; color: #6e665c"
+                      >ATA exists</span
+                    ></span
+                  >
+                  <span
+                    style="
+                      width: 110px;
+                      text-align: right;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 13px;
+                      font-variant-numeric: tabular-nums;
+                    "
+                    >8,000</span
+                  >
+                  <span style="width: 116px; text-align: right"
+                    ><span
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        font-size: 12.5px;
+                        color: #5fbf8c;
+                      "
+                      ><svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M5 12.5l4.5 4.5L19 7.5"
+                          stroke="#5FBF8C"
+                          stroke-width="2.2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        /></svg
+                      >Valid</span
+                    ></span
+                  >
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    padding: 11px 12px;
+                    border-bottom: 1px solid #1e1a17;
+                    background: rgba(226, 104, 95, 0.05);
+                  "
+                >
+                  <span
+                    style="
+                      width: 26px;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 12px;
+                      color: #6e665c;
+                    "
+                    >4</span
+                  >
+                  <span
+                    style="
+                      flex-grow: 1;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 12.5px;
+                      color: #e2685f;
+                    "
+                    >0OIl1invalidbase58address000zzz</span
+                  >
+                  <span style="width: 80px"></span>
+                  <span
+                    style="
+                      width: 110px;
+                      text-align: right;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 13px;
+                      font-variant-numeric: tabular-nums;
+                    "
+                    >4,200</span
+                  >
+                  <span style="width: 116px; text-align: right"
+                    ><span
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        font-size: 12.5px;
+                        color: #e2685f;
+                      "
+                      ><svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="8.5"
+                          stroke="#E2685F"
+                          stroke-width="1.7"
+                        />
+                        <path
+                          d="M12 8v4.5M12 15.5h.01"
+                          stroke="#E2685F"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                        /></svg
+                      >Bad base58</span
+                    ></span
+                  >
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    padding: 11px 12px;
+                  "
+                >
+                  <span
+                    style="
+                      width: 26px;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 12px;
+                      color: #6e665c;
+                    "
+                    >5</span
+                  >
+                  <span
+                    style="
+                      flex-grow: 1;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 12.5px;
+                      color: #f5f0e8;
+                    "
+                    >Bq4sVc6RfXeAu1D8nHgYzT2WbKp9LmQvR3x</span
+                  >
+                  <span style="width: 80px"
+                    ><span
+                      style="
+                        padding: 3px 8px;
+                        background: rgba(232, 163, 61, 0.12);
+                        border-radius: 6px;
+                        font-size: 11px;
+                        font-weight: 600;
+                        color: #e8a33d;
+                      "
+                      >+ ATA</span
+                    ></span
+                  >
+                  <span
+                    style="
+                      width: 110px;
+                      text-align: right;
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 13px;
+                      font-variant-numeric: tabular-nums;
+                    "
+                    >1,000</span
+                  >
+                  <span style="width: 116px; text-align: right"
+                    ><span
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 6px;
+                        font-size: 12.5px;
+                        color: #5fbf8c;
+                      "
+                      ><svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M5 12.5l4.5 4.5L19 7.5"
+                          stroke="#5FBF8C"
+                          stroke-width="2.2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        /></svg
+                      >Valid</span
+                    ></span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div
+              style="
+                width: 400px;
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 14px;
+                  padding: 20px;
+                  background: #171412;
+                  border: 1px solid #241f1b;
+                  border-radius: 20px;
+                "
+              >
+                <span
+                  style="
+                    font-size: 12px;
+                    font-weight: 600;
+                    letter-spacing: 0.06em;
+                    text-transform: uppercase;
+                    color: #8c8377;
+                  "
+                  >Execution plan</span
+                >
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                    gap: 10px;
+                  "
+                >
+                  <div
+                    style="
+                      display: flex;
+                      flex-direction: column;
+                      gap: 4px;
+                      padding: 14px;
+                      background: #0f0d0b;
+                      border: 1px solid #211d19;
+                      border-radius: 14px;
+                    "
+                  >
+                    <span
+                      style="
+                        font-family: &quot;Bricolage Grotesque&quot;, system-ui;
+                        font-size: 26px;
+                        font-weight: 700;
+                        font-variant-numeric: tabular-nums;
+                        letter-spacing: -0.02em;
+                      "
+                      >4</span
+                    >
+                    <span style="font-size: 12px; color: #8c8377"
+                      >recipients</span
+                    >
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      flex-direction: column;
+                      gap: 4px;
+                      padding: 14px;
+                      background: #0f0d0b;
+                      border: 1px solid #211d19;
+                      border-radius: 14px;
+                    "
+                  >
+                    <span
+                      style="
+                        font-family: &quot;Bricolage Grotesque&quot;, system-ui;
+                        font-size: 26px;
+                        font-weight: 700;
+                        font-variant-numeric: tabular-nums;
+                        letter-spacing: -0.02em;
+                        color: #e2685f;
+                      "
+                      >1</span
+                    >
+                    <span style="font-size: 12px; color: #8c8377"
+                      >row with errors</span
+                    >
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 9px">
+                  <div
+                    style="
+                      display: flex;
+                      align-items: baseline;
+                      justify-content: space-between;
+                    "
+                  >
+                    <span style="font-size: 13px; color: #a39b8f"
+                      >Transactions</span
+                    >
+                    <span
+                      style="
+                        font-family: &quot;JetBrains Mono&quot;, monospace;
+                        font-size: 13px;
+                        font-variant-numeric: tabular-nums;
+                      "
+                      >1 &#215; 8 per batch</span
+                    >
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: baseline;
+                      justify-content: space-between;
+                    "
+                  >
+                    <span style="font-size: 13px; color: #a39b8f"
+                      >New token accounts</span
+                    >
+                    <span
+                      style="
+                        font-family: &quot;JetBrains Mono&quot;, monospace;
+                        font-size: 13px;
+                        font-variant-numeric: tabular-nums;
+                      "
+                      >2</span
+                    >
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: baseline;
+                      justify-content: space-between;
+                    "
+                  >
+                    <span style="font-size: 13px; color: #a39b8f"
+                      >Total to send</span
+                    >
+                    <span
+                      style="
+                        font-family: &quot;JetBrains Mono&quot;, monospace;
+                        font-size: 13px;
+                        font-variant-numeric: tabular-nums;
+                      "
+                      >29,500 BAKE</span
+                    >
+                  </div>
+                  <div
+                    style="height: 1px; margin: 3px 0; background: #241f1b"
+                  ></div>
+                  <div
+                    style="
+                      display: flex;
+                      align-items: baseline;
+                      justify-content: space-between;
+                    "
+                  >
+                    <span style="font-size: 13.5px; font-weight: 600"
+                      >Estimated cost</span
+                    >
+                    <span
+                      style="
+                        font-family: &quot;JetBrains Mono&quot;, monospace;
+                        font-size: 14.5px;
+                        font-weight: 600;
+                        color: #e8a33d;
+                        font-variant-numeric: tabular-nums;
+                      "
+                      >0.00408856</span
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 12px;
+                  padding: 20px;
+                  background: #171412;
+                  border: 1px solid #241f1b;
+                  border-radius: 20px;
+                "
+              >
+                <div
+                  style="
+                    display: flex;
+                    align-items: baseline;
+                    justify-content: space-between;
+                  "
+                >
+                  <span
+                    style="
+                      font-size: 12px;
+                      font-weight: 600;
+                      letter-spacing: 0.06em;
+                      text-transform: uppercase;
+                      color: #8c8377;
+                    "
+                    >Progress</span
+                  >
+                  <span
+                    style="
+                      font-family: &quot;JetBrains Mono&quot;, monospace;
+                      font-size: 12.5px;
+                      color: #a39b8f;
+                      font-variant-numeric: tabular-nums;
+                    "
+                    >0 / 1</span
+                  >
+                </div>
+                <div
+                  style="
+                    height: 6px;
+                    background: #221d19;
+                    border-radius: 999px;
+                    overflow: hidden;
+                  "
+                >
+                  <div
+                    style="width: 0%; height: 6px; background: #e8a33d"
+                  ></div>
+                </div>
+                <span style="font-size: 12.5px; color: #6e665c"
+                  >Fix the invalid row to continue. Batches sign one at a time
+                  with a fresh blockhash.</span
+                >
+              </div>
+
+              <div
+                style="
+                  height: 52px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  gap: 9px;
+                  background: #221d19;
+                  border: 1px solid #2a2521;
+                  border-radius: 14px;
+                  color: #6e665c;
+                  font-size: 15px;
+                  font-weight: 700;
+                "
+              >
+                Send airdrop
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </x-dc>
+  </body>
+</html>

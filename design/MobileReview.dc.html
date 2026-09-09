@@ -1,0 +1,475 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        />
+        <style>
+          * {
+            box-sizing: border-box;
+          }
+          body {
+            margin: 0;
+            background: #0f0d0b;
+            color: #f5f0e8;
+            font-family: "Instrument Sans", system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+          }
+          a {
+            color: #e8a33d;
+            text-decoration: none;
+          }
+          a:hover {
+            color: #f2b457;
+          }
+          ::placeholder {
+            color: #6e665c;
+          }
+        </style>
+      </helmet>
+
+      <div
+        style="
+          width: 390px;
+          height: 844px;
+          background: #0f0d0b;
+          background-image: radial-gradient(
+            360px 200px at 50% -4%,
+            rgba(232, 163, 61, 0.12),
+            transparent 72%
+          );
+          display: flex;
+          flex-direction: column;
+        "
+      >
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 18px 12px;
+          "
+        >
+          <div style="display: flex; align-items: center; gap: 8px">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="12"
+                cy="12"
+                r="9.25"
+                stroke="#E8A33D"
+                stroke-width="1.5"
+              />
+              <circle cx="9.2" cy="9.6" r="1.35" fill="#E8A33D" />
+              <circle cx="14.6" cy="12.4" r="1.1" fill="#E8A33D" />
+            </svg>
+            <span
+              style="
+                font-family: &quot;Bricolage Grotesque&quot;, system-ui;
+                font-size: 15.5px;
+                font-weight: 700;
+                letter-spacing: -0.02em;
+              "
+              >Cookie Bakery</span
+            >
+          </div>
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 7px;
+              height: 34px;
+              padding: 0 11px;
+              background: #171412;
+              border: 1px solid #241f1b;
+              border-radius: 999px;
+            "
+          >
+            <span
+              style="
+                width: 6px;
+                height: 6px;
+                border-radius: 999px;
+                background: #5fbf8c;
+              "
+            ></span>
+            <span
+              style="
+                font-family: &quot;JetBrains Mono&quot;, monospace;
+                font-size: 11.5px;
+                color: #f5f0e8;
+              "
+              >6MGL&#8230;zRQa</span
+            >
+          </div>
+        </div>
+        <div
+          style="
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 6px 18px 18px;
+            overflow: hidden;
+          "
+        >
+          <div style="display: flex; flex-direction: column; gap: 4px">
+            <span
+              style="
+                font-family: &quot;Bricolage Grotesque&quot;, system-ui;
+                font-size: 24px;
+                font-weight: 700;
+                letter-spacing: -0.03em;
+              "
+              >Before you sign</span
+            >
+            <span style="font-size: 12.5px; color: #8c8377"
+              >Simulated &#183; nothing sent yet</span
+            >
+          </div>
+
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 13px;
+              padding: 16px;
+              background: #171412;
+              border: 1px solid #241f1b;
+              border-radius: 18px;
+            "
+          >
+            <div
+              style="
+                width: 46px;
+                height: 46px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                background: linear-gradient(145deg, #e8a33d, #c9781f);
+                border-radius: 14px;
+                font-family: &quot;Bricolage Grotesque&quot;, system-ui;
+                font-size: 16px;
+                font-weight: 800;
+                color: #1a1410;
+              "
+            >
+              BA
+            </div>
+            <div
+              style="
+                flex-grow: 1;
+                display: flex;
+                flex-direction: column;
+                gap: 2px;
+              "
+            >
+              <span style="font-size: 15px; font-weight: 600"
+                >Bakery Cookie</span
+              >
+              <span
+                style="
+                  font-family: &quot;JetBrains Mono&quot;, monospace;
+                  font-size: 12px;
+                  color: #8c8377;
+                "
+                >856T&#8230;SdGt</span
+              >
+            </div>
+            <div
+              style="
+                display: flex;
+                flex-direction: column;
+                align-items: flex-end;
+                gap: 1px;
+              "
+            >
+              <span
+                style="
+                  font-family: &quot;Bricolage Grotesque&quot;, system-ui;
+                  font-size: 18px;
+                  font-weight: 700;
+                  font-variant-numeric: tabular-nums;
+                "
+                >1,000,000</span
+              >
+              <span style="font-size: 11px; color: #8c8377">BAKE</span>
+            </div>
+          </div>
+
+          <div
+            style="
+              display: flex;
+              flex-direction: column;
+              padding: 4px 18px;
+              background: #171412;
+              border: 1px solid #241f1b;
+              border-radius: 18px;
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                padding: 13px 0;
+                border-bottom: 1px solid #1e1a17;
+              "
+            >
+              <span style="font-size: 13px; color: #a39b8f">Mint rent</span>
+              <span
+                style="
+                  font-family: &quot;JetBrains Mono&quot;, monospace;
+                  font-size: 12.5px;
+                  font-variant-numeric: tabular-nums;
+                "
+                >0.00322248</span
+              >
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                padding: 13px 0;
+                border-bottom: 1px solid #1e1a17;
+              "
+            >
+              <span style="font-size: 13px; color: #a39b8f"
+                >Token account rent</span
+              >
+              <span
+                style="
+                  font-family: &quot;JetBrains Mono&quot;, monospace;
+                  font-size: 12.5px;
+                  font-variant-numeric: tabular-nums;
+                "
+                >0.00203928</span
+              >
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                padding: 13px 0;
+                border-bottom: 1px solid #1e1a17;
+              "
+            >
+              <span style="font-size: 13px; color: #a39b8f">Network fee</span>
+              <span
+                style="
+                  font-family: &quot;JetBrains Mono&quot;, monospace;
+                  font-size: 12.5px;
+                  font-variant-numeric: tabular-nums;
+                "
+                >0.00001000</span
+              >
+            </div>
+            <div
+              style="
+                display: flex;
+                align-items: baseline;
+                justify-content: space-between;
+                padding: 14px 0;
+              "
+            >
+              <span style="font-size: 14px; font-weight: 600">Total</span>
+              <span
+                style="
+                  font-family: &quot;JetBrains Mono&quot;, monospace;
+                  font-size: 15px;
+                  font-weight: 600;
+                  color: #e8a33d;
+                  font-variant-numeric: tabular-nums;
+                "
+                >0.00527176</span
+              >
+            </div>
+          </div>
+
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              padding: 13px 15px;
+              background: #171412;
+              border: 1px solid #241f1b;
+              border-radius: 15px;
+            "
+          >
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                stroke="#5FBF8C"
+                stroke-width="1.5"
+              />
+              <path
+                d="M8.5 12.3l2.4 2.4 4.6-4.9"
+                stroke="#5FBF8C"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span style="flex-grow: 1; font-size: 12.5px; color: #a39b8f"
+              >Simulation passed</span
+            >
+            <span
+              style="
+                font-family: &quot;JetBrains Mono&quot;, monospace;
+                font-size: 11.5px;
+                color: #6e665c;
+              "
+              >6 instructions</span
+            >
+          </div>
+
+          <div style="flex-grow: 1"></div>
+
+          <div style="display: flex; flex-direction: column; gap: 9px">
+            <div
+              style="
+                height: 54px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 9px;
+                background: #e8a33d;
+                border-radius: 15px;
+                color: #1a1410;
+                font-size: 16px;
+                font-weight: 700;
+                box-shadow: 0 12px 30px -14px rgba(232, 163, 61, 0.6);
+              "
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M7 11V8a5 5 0 0110 0v3"
+                  stroke="#1A1410"
+                  stroke-width="1.9"
+                  stroke-linecap="round"
+                />
+                <rect
+                  x="5"
+                  y="11"
+                  width="14"
+                  height="9"
+                  rx="2.5"
+                  stroke="#1A1410"
+                  stroke-width="1.9"
+                />
+              </svg>
+              Bake token
+            </div>
+            <span style="text-align: center; font-size: 11.5px; color: #6e665c"
+              >Nightly signs &#183; the app submits to Cookie Chain</span
+            >
+          </div>
+        </div>
+        <div
+          style="
+            height: 74px;
+            display: flex;
+            align-items: flex-start;
+            padding-top: 10px;
+            border-top: 1px solid #211d19;
+            background: #121010;
+          "
+        >
+          <div
+            style="
+              flex-grow: 1;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 5px;
+              height: 100%;
+            "
+          >
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="12"
+                cy="12"
+                r="8.6"
+                stroke="#E8A33D"
+                stroke-width="1.7"
+              />
+              <circle cx="9.4" cy="9.9" r="1.25" fill="#E8A33D" />
+              <circle cx="14.4" cy="12.5" r="1" fill="#E8A33D" /></svg
+            ><span style="font-size: 10.5px; font-weight: 600; color: #e8a33d"
+              >Bake</span
+            >
+          </div>
+          <div
+            style="
+              flex-grow: 1;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 5px;
+              height: 100%;
+            "
+          >
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 4v11M7.8 10.8L12 15l4.2-4.2"
+                stroke="#57504A"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M5 19h14"
+                stroke="#57504A"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              /></svg
+            ><span style="font-size: 10.5px; font-weight: 600; color: #6e665c"
+              >Airdrop</span
+            >
+          </div>
+          <div
+            style="
+              flex-grow: 1;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              justify-content: center;
+              gap: 5px;
+              height: 100%;
+            "
+          >
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M4 19V10M10 19V5M16 19v-6"
+                stroke="#57504A"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+              <path
+                d="M21 19H3"
+                stroke="#57504A"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              /></svg
+            ><span style="font-size: 10.5px; font-weight: 600; color: #6e665c"
+              >Oven</span
+            >
+          </div>
+        </div>
+      </div>
+    </x-dc>
+  </body>
+</html>
