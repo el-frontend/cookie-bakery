@@ -5,6 +5,7 @@ import { formatCookWithSymbol } from "../lib/format/lamports";
 import { truncateAddress } from "../lib/format/address";
 import type { BakeCost } from "../lib/token/sizing";
 import { ProgramLogViewer } from "./ProgramLogViewer";
+import { Button } from "./ui/Button";
 
 /**
  * What the user sees immediately before signing (RF-02.5).
@@ -164,18 +165,19 @@ export function BakeSummary({
         </div>
       ) : null}
 
-      <button
+      <Button
         data-testid="bake-submit"
         disabled={blocked}
         onClick={onSubmit}
-        className="w-full rounded-xl bg-foreground px-4 py-3 text-sm font-semibold text-bg1 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        size="lg"
+        className="w-full"
       >
         {isPlanning
           ? "Simulating…"
           : isSending
             ? "Waiting for signature…"
             : "Bake token"}
-      </button>
+      </Button>
     </section>
   );
 }

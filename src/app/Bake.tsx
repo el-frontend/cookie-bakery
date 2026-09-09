@@ -6,7 +6,10 @@ import {
   useSendTransaction,
 } from "@solana/react";
 import { BakeSummary } from "../components/BakeSummary";
+import { Button } from "../components/ui/Button";
+import { Checkbox, Field, Input } from "../components/ui/Field";
 import { TokenResultCard } from "../components/TokenResultCard";
+import { useBakeCost } from "../hooks/useBakeCost";
 import { useCookBalance } from "../hooks/useCookBalance";
 import { useTrackedSend } from "../hooks/useTrackedSend";
 import { mapError } from "../lib/errors/mapError";
@@ -24,6 +27,8 @@ import {
 } from "../lib/token/buildCreateToken2022";
 import { buildCreateTokenClassicPlan } from "../lib/token/buildCreateTokenClassic";
 import { estimateBakeCost, type BakeCost } from "../lib/token/sizing";
+import { formatCookWithSymbol } from "../lib/format/lamports";
+import type { Lamports } from "@solana/kit";
 import { addMyToken, type MyToken } from "../store/myTokens";
 import type { AppClient } from "../providers";
 
@@ -63,54 +68,45 @@ const DEFAULT_ADVANCED: AdvancedOptions = {
 
 type Phase = "form" | "result" | "review";
 
-const inputClass =
-  "w-full rounded-lg border border-border-low bg-bg1 px-3 py-2 text-sm outline-none focus:border-primary";
+const SELECT_CLASS =
+  "h-[46px] w-full rounded-md border border-border-strong bg-bg1 px-3.5 text-[14.5px] " +
+  "outline-none transition-[border-color,box-shadow] duration-[160ms] " +
+  "[transition-timing-function:var(--ease-strong-out)] focus:border-accent " +
+  "focus:shadow-[0_0_0_3px_rgba(232,163,61,0.15)]";
 
-function Field({
-  children,
-  error,
-  label,
+/**
+ * The cost strip under the form. It appears as soon as the token has a name
+ * and a symbol — seeing the price before committing to a review is the point.
+ */
+function CostPreview({
+  balance,
+  cost,
 }: {
-  children: React.ReactNode;
-  error?: string;
-  label: string;
+  balance: Lamports | null;
+  cost: BakeCost | null;
 }) {
+  const short = cost != null && balance != null && balance < cost.total;
+
   return (
-    <label className="space-y-1">
-      <span className="block text-xs font-medium uppercase tracking-wide text-muted">
-        {label}
-      </span>
-      {children}
-      {error ? (
-        <span role="alert" className="block text-xs text-red-600">
-          {error}
+    <div className="flex flex-col gap-3 rounded-lg border border-accent/20 bg-accent/[0.05] px-5 py-[18px]">
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[13px] text-ink-2">Estimated cost</span>
+        <span className="font-mono text-[15px] font-semibold text-accent num">
+          {cost ? formatCookWithSymbol(cost.total as Lamports) : "—"}
         </span>
-      ) : null}
-    </label>
-  );
-}
-
-function Checkbox({
-  checked,
-  disabled,
-  label,
-  onChange,
-}: {
-  checked: boolean;
-  disabled?: boolean;
-  label: string;
-  onChange: (checked: boolean) => void;
-}) {
-  return (
-    <label className="flex items-center gap-2 text-sm">
-      <input
-        type="checkbox"
-        checked={checked}
-        disabled={disabled}
-        onChange={(e) => onChange(e.target.checked)}
-      />
-      <span className={disabled ? "text-muted" : undefined}>{label}</span>
-    </label>
+      </div>
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="text-[13px] text-ink-3">Your balance</span>
+        <span
+          className={
+            "font-mono text-[13px] num " +
+            (short ? "font-semibold text-danger" : "text-ink-2")
+          }
+        >
+          {balance == null ? "—" : formatCookWithSymbol(balance)}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -138,6 +134,20 @@ export function Bake({ client }: { client: AppClient }) {
   const [created, setCreated] = useState<MyToken | null>(null);
 
   const isToken2022 = advanced.program === "token-2022";
+
+  const previewCost = useBakeCost(
+    client,
+    values.name.trim() && values.symbol.trim()
+      ? {
+          mintCloseAuthority: isToken2022 && advanced.mintCloseAuthority,
+          name: values.name.trim(),
+          symbol: values.symbol.trim(),
+          token2022: isToken2022,
+          transferFee: null,
+          uri: isToken2022 ? (values.metadataUri?.trim() ?? "") : "",
+        }
+      : null
+  );
 
   const update = useCallback(
     <K extends keyof BakeFormValues>(key: K, value: BakeFormValues[K]) => {
@@ -275,7 +285,7 @@ export function Bake({ client }: { client: AppClient }) {
 
   if (phase === "review") {
     return (
-      <div className="space-y-4">
+      <div className="enter space-y-4">
         <BakeSummary
           balance={lamports}
           cost={cost}
@@ -300,177 +310,217 @@ export function Bake({ client }: { client: AppClient }) {
   }
 
   return (
-    <section
-      aria-label="Bake a token"
-      className="space-y-6 rounded-2xl border border-border-low bg-card p-6"
-    >
-      <div className="space-y-1">
-        <h2 className="text-lg font-semibold">Bake a token</h2>
-        <p className="text-sm text-muted">
-          Creates the mint, your associated token account and the initial
-          supply.
+    <section aria-label="Bake a token" className="flex flex-col gap-[22px]">
+      <div className="enter enter-1 flex flex-col gap-[7px]">
+        <h2 className="font-display text-[34px] font-bold leading-[1.1] tracking-[-0.03em]">
+          Bake a token
+        </h2>
+        <p className="text-[14.5px] leading-relaxed text-ink-2">
+          Creates the mint, your token account and the initial supply in a
+          single transaction.
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Name" error={errors.name}>
-          <input
-            aria-label="Name"
-            className={inputClass}
-            onChange={(e) => update("name", e.target.value)}
-            placeholder="Bakery Cookie"
-            value={values.name}
+      <div className="enter enter-2 flex flex-col gap-[18px] rounded-xl border border-border-low bg-card p-6">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Name" error={errors.name}>
+            <Input
+              aria-label="Name"
+              onChange={(e) => update("name", e.target.value)}
+              placeholder="Bakery Cookie"
+              value={values.name}
+            />
+          </Field>
+          <Field label="Symbol" error={errors.symbol}>
+            <Input
+              aria-label="Symbol"
+              onChange={(e) => update("symbol", e.target.value)}
+              placeholder="BAKE"
+              value={values.symbol}
+            />
+          </Field>
+          <Field label="Decimals" error={errors.decimals}>
+            <Input
+              aria-label="Decimals"
+              max={9}
+              min={0}
+              onChange={(e) => update("decimals", Number(e.target.value))}
+              type="number"
+              value={values.decimals}
+            />
+          </Field>
+          <Field label="Initial supply" error={errors.supply}>
+            <Input
+              aria-label="Initial supply"
+              onChange={(e) => update("supply", e.target.value)}
+              value={values.supply}
+            />
+          </Field>
+        </div>
+
+        <Field label="Metadata URI (optional)" error={errors.metadataUri}>
+          <Input
+            aria-label="Metadata URI"
+            disabled={!isToken2022}
+            onChange={(e) => update("metadataUri", e.target.value)}
+            placeholder="https://example.com/metadata.json"
+            value={values.metadataUri ?? ""}
           />
         </Field>
-        <Field label="Symbol" error={errors.symbol}>
-          <input
-            aria-label="Symbol"
-            className={inputClass}
-            onChange={(e) => update("symbol", e.target.value)}
-            placeholder="BAKE"
-            value={values.symbol}
+
+        <Field label="Short description" hint="stored on this device">
+          <Input
+            aria-label="Short description"
+            onChange={(e) => update("description", e.target.value)}
+            value={values.description ?? ""}
           />
         </Field>
-        <Field label="Decimals" error={errors.decimals}>
-          <input
-            aria-label="Decimals"
-            className={inputClass}
-            max={9}
-            min={0}
-            onChange={(e) => update("decimals", Number(e.target.value))}
-            type="number"
-            value={values.decimals}
-          />
-        </Field>
-        <Field label="Initial supply" error={errors.supply}>
-          <input
-            aria-label="Initial supply"
-            className={inputClass}
-            onChange={(e) => update("supply", e.target.value)}
-            value={values.supply}
-          />
-        </Field>
+
+        <div className="h-px bg-border-low" />
+
+        <details className="group">
+          <summary className="flex cursor-pointer list-none items-center gap-2.5 text-sm font-semibold marker:content-none">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden
+              className="text-ink-2 transition-transform duration-[200ms] [transition-timing-function:var(--ease-strong-out)] group-open:rotate-90"
+            >
+              <path
+                d="M9 6l6 6-6 6"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Advanced options
+            {isToken2022 ? (
+              <span className="rounded-full bg-accent/12 px-2.5 py-[3px] text-[11px] font-semibold text-accent">
+                Token-2022
+              </span>
+            ) : null}
+          </summary>
+          <div className="mt-4 space-y-4">
+            <Field label="Token program">
+              <select
+                aria-label="Token program"
+                className={SELECT_CLASS}
+                onChange={(e) =>
+                  setAdvanced((current) => ({
+                    ...current,
+                    program: e.target.value as AdvancedOptions["program"],
+                  }))
+                }
+                value={advanced.program}
+              >
+                <option value="token-2022">
+                  Token-2022 (metadata + extensions)
+                </option>
+                <option value="token">Classic SPL Token (no metadata)</option>
+              </select>
+            </Field>
+
+            <Checkbox
+              checked={advanced.revokeFreezeAuthority}
+              label="Revoke freeze authority"
+              onChange={(checked) =>
+                setAdvanced((c) => ({ ...c, revokeFreezeAuthority: checked }))
+              }
+            />
+            <Checkbox
+              checked={advanced.revokeMintAuthority}
+              label="Revoke mint authority after the initial mint"
+              onChange={(checked) =>
+                setAdvanced((c) => ({ ...c, revokeMintAuthority: checked }))
+              }
+            />
+            <Checkbox
+              checked={advanced.mintCloseAuthority}
+              disabled={!isToken2022}
+              label="Mint close authority"
+              onChange={(checked) =>
+                setAdvanced((c) => ({ ...c, mintCloseAuthority: checked }))
+              }
+            />
+            <Checkbox
+              checked={advanced.transferFeeEnabled}
+              disabled={!isToken2022}
+              label="Transfer fee"
+              onChange={(checked) =>
+                setAdvanced((c) => ({ ...c, transferFeeEnabled: checked }))
+              }
+            />
+
+            {advanced.transferFeeEnabled && isToken2022 ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Fee (basis points)">
+                  <Input
+                    aria-label="Fee basis points"
+                    max={10000}
+                    min={0}
+                    onChange={(e) =>
+                      setAdvanced((c) => ({
+                        ...c,
+                        transferFeeBasisPoints: e.target.value,
+                      }))
+                    }
+                    type="number"
+                    value={advanced.transferFeeBasisPoints}
+                  />
+                </Field>
+                <Field label="Maximum fee (tokens)">
+                  <Input
+                    aria-label="Maximum fee"
+                    onChange={(e) =>
+                      setAdvanced((c) => ({
+                        ...c,
+                        transferFeeMax: e.target.value,
+                      }))
+                    }
+                    value={advanced.transferFeeMax}
+                  />
+                </Field>
+              </div>
+            ) : null}
+          </div>
+        </details>
       </div>
 
-      <Field label="Metadata URI (optional)" error={errors.metadataUri}>
-        <input
-          aria-label="Metadata URI"
-          className={inputClass}
-          disabled={!isToken2022}
-          onChange={(e) => update("metadataUri", e.target.value)}
-          placeholder="https://example.com/metadata.json"
-          value={values.metadataUri ?? ""}
-        />
-      </Field>
-
-      <Field label="Short description (stored locally)">
-        <input
-          aria-label="Short description"
-          className={inputClass}
-          onChange={(e) => update("description", e.target.value)}
-          value={values.description ?? ""}
-        />
-      </Field>
-
-      <details className="rounded-lg border border-border-low px-4 py-3">
-        <summary className="cursor-pointer text-sm font-medium">
-          Advanced options
-        </summary>
-        <div className="mt-4 space-y-4">
-          <Field label="Token program">
-            <select
-              aria-label="Token program"
-              className={inputClass}
-              onChange={(e) =>
-                setAdvanced((current) => ({
-                  ...current,
-                  program: e.target.value as AdvancedOptions["program"],
-                }))
-              }
-              value={advanced.program}
-            >
-              <option value="token-2022">
-                Token-2022 (metadata + extensions)
-              </option>
-              <option value="token">Classic SPL Token (no metadata)</option>
-            </select>
-          </Field>
-
-          <Checkbox
-            checked={advanced.revokeFreezeAuthority}
-            label="Revoke freeze authority"
-            onChange={(checked) =>
-              setAdvanced((c) => ({ ...c, revokeFreezeAuthority: checked }))
-            }
-          />
-          <Checkbox
-            checked={advanced.revokeMintAuthority}
-            label="Revoke mint authority after the initial mint"
-            onChange={(checked) =>
-              setAdvanced((c) => ({ ...c, revokeMintAuthority: checked }))
-            }
-          />
-          <Checkbox
-            checked={advanced.mintCloseAuthority}
-            disabled={!isToken2022}
-            label="Mint close authority"
-            onChange={(checked) =>
-              setAdvanced((c) => ({ ...c, mintCloseAuthority: checked }))
-            }
-          />
-          <Checkbox
-            checked={advanced.transferFeeEnabled}
-            disabled={!isToken2022}
-            label="Transfer fee"
-            onChange={(checked) =>
-              setAdvanced((c) => ({ ...c, transferFeeEnabled: checked }))
-            }
-          />
-
-          {advanced.transferFeeEnabled && isToken2022 ? (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Fee (basis points)">
-                <input
-                  aria-label="Fee basis points"
-                  className={inputClass}
-                  max={10000}
-                  min={0}
-                  onChange={(e) =>
-                    setAdvanced((c) => ({
-                      ...c,
-                      transferFeeBasisPoints: e.target.value,
-                    }))
-                  }
-                  type="number"
-                  value={advanced.transferFeeBasisPoints}
-                />
-              </Field>
-              <Field label="Maximum fee (tokens)">
-                <input
-                  aria-label="Maximum fee"
-                  className={inputClass}
-                  onChange={(e) =>
-                    setAdvanced((c) => ({
-                      ...c,
-                      transferFeeMax: e.target.value,
-                    }))
-                  }
-                  value={advanced.transferFeeMax}
-                />
-              </Field>
-            </div>
-          ) : null}
+      {payer ? (
+        <div className="enter enter-3">
+          <CostPreview balance={lamports} cost={previewCost} />
         </div>
-      </details>
+      ) : null}
 
-      <button
+      <Button
         data-testid="bake-review"
         disabled={!payer}
         onClick={() => void review()}
-        className="w-full rounded-xl bg-foreground px-4 py-3 text-sm font-semibold text-bg1 transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+        size="lg"
+        className="enter enter-3 w-full"
       >
         {payer ? "Review transaction" : "Connect a wallet to bake"}
-      </button>
+        {payer ? (
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden
+          >
+            <path
+              d="M5 12h13M13 6l6 6-6 6"
+              stroke="currentColor"
+              strokeWidth="1.9"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : null}
+      </Button>
     </section>
   );
 }
