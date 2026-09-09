@@ -1,51 +1,103 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: oklch(0.145 0 0);
-  --border-strong: oklch(0.839 0.0187 78.23);
-  --border-low: oklch(0.927 0.0122 96.43);
-  --accent: oklch(0 0 0);
-  --muted: #3a3a3a;
-  --cream: oklch(0.9553 0.0029 84.56);
-  --card: #ffffff;
-  --card-foreground: oklch(0.145 0 0);
-  --radius: 0.625rem;
-  --font-sans: system-ui, sans-serif;
-  --font-mono: ui-monospace, monospace;
-}
+/*
+ * Cookie Bakery — "warm dark bakery".
+ *
+ * One accent (caramel) on a warm near-black. The greys are a DESCENDING ramp
+ * where every step that carries information clears WCAG AA against both the
+ * canvas and the card surface; --ink-4 is deliberately below it and is only
+ * ever used for input placeholders, which never carry information alone.
+ *
+ * Contrast against #0F0D0B / #171412:
+ *   ink   17.10 / 16.16      ink-3  5.20 / 4.91
+ *   ink-2  7.06 /  6.67      ink-4  3.43 / 3.25  (placeholders only)
+ */
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --border-strong: oklch(1 0 0 / 0.12);
-    --border-low: oklch(1 0 0 / 0.08);
-    --accent: oklch(0.922 0 0);
-    --muted: oklch(0.75 0.01 260);
-    --cream: oklch(0.22 0.009 70.82);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-  }
+:root {
+  color-scheme: dark;
+
+  /* Surfaces */
+  --canvas: #0f0d0b;
+  --surface: #171412;
+  --raised: #1e1a17;
+  --hairline: #241f1b;
+  --hairline-strong: #2a2521;
+
+  /* Ink */
+  --ink: #f5f0e8;
+  --ink-2: #a39b8f;
+  --ink-3: #8c8377;
+  --ink-4: #6e665c;
+
+  /* Accent & status */
+  --accent: #e8a33d;
+  --accent-hover: #f2b457;
+  --accent-ink: #1a1410;
+  --success: #5fbf8c;
+  --danger: #e2685f;
+
+  --radius: 0.875rem;
+
+  --font-display: "Bricolage Grotesque", system-ui, sans-serif;
+  --font-sans: "Instrument Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /*
+   * Built-in CSS easings are too weak to read as intentional. These are the
+   * stronger variants; --ease-strong-out is the default for anything entering.
+   */
+  --ease-strong-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-strong-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  /* Distance an entering element travels. Zeroed under reduced motion. */
+  --enter-shift: 8px;
+  --enter-scale: 0.96;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-bg1: var(--background);
-  --color-foreground: var(--foreground);
-  --color-cream: var(--cream);
-  --color-border: var(--border-strong);
-  --color-border-strong: var(--border-strong);
-  --color-border-low: var(--border-low);
+  /* Names the existing components already use, repointed at the new palette. */
+  --color-background: var(--canvas);
+  --color-bg1: var(--canvas);
+  --color-card: var(--surface);
+  --color-card-foreground: var(--ink);
+  --color-cream: var(--raised);
+  --color-foreground: var(--ink);
+  --color-muted: var(--ink-2);
+  --color-border: var(--hairline);
+  --color-border-low: var(--hairline);
+  --color-border-strong: var(--hairline-strong);
   --color-primary: var(--accent);
-  --color-muted: var(--muted);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
+
+  /* New in the redesign. */
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-ink: var(--accent-ink);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+
+  --font-display: var(--font-display);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  --radius-md: calc(var(--radius) - 2px);
+
+  --radius-chip: 0.5rem;
+  --radius-md: 0.75rem;
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: 1.375rem;
+
+  /*
+   * The easing curves are deliberately NOT re-declared here, and they are
+   * named `--ease-strong-*` rather than `--ease-*`: that namespace belongs to
+   * Tailwind, which ships its own weaker `--ease-out`. Re-declaring ours in
+   * `@theme inline` would emit a self-reference that makes the variable
+   * invalid, and every animation would silently fall back to the browser
+   * default. They live on `:root` above and are used directly with `var()`.
+   */
 }
 
 @layer base {
@@ -56,6 +108,94 @@
   body {
     @apply bg-bg1 text-foreground antialiased;
     font-family: var(--font-sans);
-    color-scheme: light dark;
+  }
+
+  /* Tabular figures everywhere a number can change under the reader. */
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+
+  input::placeholder {
+    color: var(--ink-4);
+  }
+
+  /*
+   * Reduced motion means gentler, not none. Opacity and colour transitions
+   * survive because they aid comprehension; the DISTANCE is what goes, so the
+   * entrance shift and scale collapse to nothing rather than the whole
+   * animation being switched off.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    :root {
+      --enter-shift: 0px;
+      --enter-scale: 1;
+    }
+
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /*
+   * Entrance. Opacity plus a small rise — never scale(0), because nothing in
+   * the real world appears from nothing. `@starting-style` means no mount
+   * state in React, and CSS keeps it off the main thread while the app is
+   * still fetching from the RPC.
+   */
+  .enter {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity 240ms var(--ease-strong-out),
+      transform 240ms var(--ease-strong-out);
+
+    @starting-style {
+      opacity: 0;
+      transform: translateY(var(--enter-shift));
+    }
+  }
+
+  /* Three steps only. A long cascade reads as the interface being slow. */
+  .enter-1 {
+    transition-delay: 0ms;
+  }
+  .enter-2 {
+    transition-delay: 60ms;
+  }
+  .enter-3 {
+    transition-delay: 120ms;
+  }
+
+  /* For the success card — the one screen rare enough to spend delight on. */
+  .pop-in {
+    opacity: 1;
+    transform: scale(1);
+    transition:
+      opacity 260ms var(--ease-strong-out),
+      transform 260ms var(--ease-strong-out);
+
+    @starting-style {
+      opacity: 0;
+      transform: scale(var(--enter-scale));
+    }
+  }
+
+  /* The confirmation tick draws itself once. One-shot, never re-triggered. */
+  .check-draw {
+    stroke-dasharray: 26;
+    stroke-dashoffset: 26;
+    animation: check-draw 420ms var(--ease-strong-out) 140ms forwards;
+  }
+
+  @keyframes check-draw {
+    to {
+      stroke-dashoffset: 0;
+    }
   }
 }

@@ -30,3 +30,6 @@ lerna-debug.log*
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+
+# Design canvas: the seeded payload is a build artifact, regenerate from design/*.dc.html
+design/cookie-bakery-redesign.html
