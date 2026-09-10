@@ -1,13 +1,9 @@
-import { useCallback, useState } from "react";
-import type { Address } from "@solana/kit";
+import { useCallback } from "react";
 import { useClient } from "@solana/react";
-import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { BakeryMark } from "./BakeryMark";
+import { WalletMenu } from "./WalletMenu";
 import { chainConfig } from "../lib/chain/config";
-import { useCookBalance } from "../hooks/useCookBalance";
 import { useRpcHealth } from "../hooks/useRpcHealth";
-import { formatCook } from "../lib/format/lamports";
-import { truncateAddress } from "../lib/format/address";
 import type { AppClient } from "../providers";
 
 export type Section = "airdrop" | "bake" | "oven";
@@ -41,24 +37,12 @@ export function TopBar({
   onOpenHelp: () => void;
 }) {
   const client = useClient<AppClient>();
-  const connected = useConnectedWallet(client);
-  const address = connected?.account.address;
-  const { lamports } = useCookBalance(address as Address | undefined);
 
   const getSlot = useCallback(
     async () => (await client.rpc.getSlot().send()) as bigint,
     [client]
   );
   const { isHealthy, latencyMs } = useRpcHealth(getSlot);
-
-  const [copied, setCopied] = useState(false);
-  const copy = useCallback(() => {
-    if (!address) return;
-    void navigator.clipboard.writeText(address).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1400);
-    });
-  }, [address]);
 
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#211d19] px-6 py-[18px] sm:px-8">
@@ -119,20 +103,7 @@ export function TopBar({
           </span>
         </div>
 
-        {address ? (
-          <button
-            onClick={copy}
-            title="Copy address"
-            className="flex items-center gap-[9px] rounded-md border border-border-low bg-card py-[7px] pl-3 pr-2 transition-[transform,border-color] duration-[160ms] [transition-timing-function:var(--ease-strong-out)] active:scale-[0.97] hover:border-border-strong"
-          >
-            <span className="font-mono text-[12.5px] text-ink">
-              {copied ? "Copied" : truncateAddress(address)}
-            </span>
-            <span className="rounded-[6px] bg-raised px-[9px] py-1 text-[11.5px] font-semibold text-accent num">
-              {lamports == null ? "…" : `${formatCook(lamports)} COOK`}
-            </span>
-          </button>
-        ) : null}
+        <WalletMenu client={client} />
       </div>
     </header>
   );

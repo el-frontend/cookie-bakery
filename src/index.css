@@ -256,6 +256,28 @@
   }
 
   /*
+   * The header wallet menu. It grows from the chip it belongs to, so the
+   * origin is the top-right corner rather than the centre — a menu that
+   * expands from its middle reads as detached from its trigger. Shorter than
+   * .pop-in: this one is opened repeatedly, and a menu that is still settling
+   * when the pointer arrives is a menu that gets mis-clicked.
+   */
+  .menu-pop {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    transform-origin: top right;
+    transition:
+      opacity 140ms var(--ease-strong-out),
+      transform 140ms var(--ease-strong-out);
+
+    @starting-style {
+      opacity: 0;
+      transform: scale(var(--enter-scale))
+        translateY(calc(var(--enter-shift) * -0.5));
+    }
+  }
+
+  /*
    * The modal scrim. It covers the whole app, so snapping it on is the most
    * abrupt thing this UI can do; the dialog inside it uses .pop-in.
    */
