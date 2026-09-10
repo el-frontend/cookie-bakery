@@ -105,6 +105,31 @@
     @apply border-border outline-transparent;
   }
 
+  /*
+   * RF-06.4. The rule above sets every outline to transparent, which also
+   * erases the browser's default focus ring — so keyboard focus has to be
+   * given back explicitly or it disappears from the whole app.
+   *
+   * `:where()` keeps the selector at zero specificity, so any component that
+   * wants a different focus treatment (the inputs use an accent border plus a
+   * ring shadow instead) still overrides this without `!important`.
+   *
+   * `:focus-visible` rather than `:focus`: a mouse click should not leave a
+   * ring behind, but every keyboard arrival must show one.
+   */
+  :where(
+    a,
+    button,
+    input,
+    textarea,
+    select,
+    summary,
+    [tabindex]
+  ):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
   body {
     @apply bg-bg1 text-foreground antialiased;
     font-family: var(--font-sans);

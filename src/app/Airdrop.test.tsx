@@ -83,6 +83,8 @@ const rpc = {
   }),
 };
 
+const onBake = vi.fn();
+
 const sendTransaction = vi.fn(async () => ({
   kind: "single",
   status: { kind: "successful", signature: "SIG" },
@@ -148,7 +150,7 @@ function renderAirdrop() {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <ToastProvider>{children}</ToastProvider>
   );
-  return render(<Airdrop client={client} />, { wrapper });
+  return render(<Airdrop client={client} onBake={onBake} />, { wrapper });
 }
 
 /** Picks the mint by pasting it, the path a token nobody baked here takes. */

@@ -3,6 +3,7 @@ import { usePayer } from "@solana/react";
 import type { Lamports } from "@solana/kit";
 import { AirdropPlanSummary } from "../components/AirdropPlanSummary";
 import { BatchTable } from "../components/BatchTable";
+import { EmptyState } from "../components/EmptyState";
 import {
   RecipientTable,
   type RecipientRow,
@@ -90,12 +91,22 @@ function download(run: AirdropRun): void {
   URL.revokeObjectURL(url);
 }
 
-export function Airdrop({ client }: { client: AppClient }) {
+export function Airdrop({
+  client,
+  initialToken = null,
+  onBake,
+}: {
+  client: AppClient;
+  /** Preselected when the Oven hands a mint over via "Airdrop more". */
+  initialToken?: SelectedToken | null;
+  /** Sends someone with no tokens to the screen that makes one. */
+  onBake: () => void;
+}) {
   const payer = usePayer(client);
   const { lamports } = useCookBalance(payer?.address);
   const toast = useToast();
 
-  const [token, setToken] = useState<SelectedToken | null>(null);
+  const [token, setToken] = useState<SelectedToken | null>(initialToken);
   const [csv, setCsv] = useState("");
   const [merged, setMerged] = useState(false);
   const [prepared, setPrepared] = useState<Prepared | null>(null);
@@ -172,6 +183,24 @@ export function Airdrop({ client }: { client: AppClient }) {
     recipients.length > 0 &&
     blockingErrors.length === 0 &&
     (duplicateCount === 0 || merged);
+
+  /**
+   * Why "Prepare airdrop" is unavailable (RF-06.4).
+   *
+   * Derived from the same conditions as `canPrepare` and in the same order, so
+   * the explanation can never disagree with the disabled state.
+   */
+  const prepareBlockedReason = !payer
+    ? "Connect a wallet first."
+    : !token
+      ? "Pick a token to airdrop."
+      : recipients.length === 0
+        ? "Add at least one recipient."
+        : blockingErrors.length > 0
+          ? `Fix the ${blockingErrors.length} row${blockingErrors.length === 1 ? "" : "s"} flagged above.`
+          : duplicateCount > 0 && !merged
+            ? "Merge the duplicate addresses, or remove them."
+            : null;
 
   /** Rows for the table: every problem row, then as many clean ones as fit. */
   const displayRows = useMemo<RecipientRow[]>(() => {
@@ -473,6 +502,20 @@ export function Airdrop({ client }: { client: AppClient }) {
         </p>
       </div>
 
+      {/*
+       * The empty state names the next action rather than the absence
+       * (AC-06.3): the recipient list is meaningless until a token fixes the
+       * decimals, so "pick a token" is the only useful instruction here.
+       */}
+      {!token ? (
+        <EmptyState
+          action={{ label: "Bake a token first", onClick: onBake }}
+          detail="Pick one of your tokens or paste a mint address below. Amounts are scaled by the mint's decimals, so the list cannot be validated until then."
+          testId="airdrop-empty-state"
+          title="Choose what to airdrop"
+        />
+      ) : null}
+
       <div className="enter enter-2 flex flex-col gap-4">
         <TokenSelector
           onChange={(next) => {
@@ -644,6 +687,7 @@ export function Airdrop({ client }: { client: AppClient }) {
               className="w-full"
               data-testid="airdrop-prepare"
               disabled={!canPrepare || isPreparing}
+              disabledReason={prepareBlockedReason ?? undefined}
               onClick={() => void prepare()}
               size="lg"
             >

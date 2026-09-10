@@ -30,9 +30,15 @@ function rpcHost(url: string): string {
 export function TopBar({
   active,
   onNavigate,
+  onOpenHelp,
 }: {
   active: Section;
   onNavigate: (section: Section) => void;
+  /**
+   * Opens "How to start" (RF-06.1). It lives in the header rather than on one
+   * screen because AC-06.5 requires it to be reachable from all of them.
+   */
+  onOpenHelp: () => void;
 }) {
   const client = useClient<AppClient>();
   const connected = useConnectedWallet(client);
@@ -87,6 +93,14 @@ export function TopBar({
       </nav>
 
       <div className="flex items-center gap-2.5">
+        <button
+          className="rounded-md border border-border-low bg-card px-3 py-2 text-[12.5px] font-medium text-ink-2 transition-colors duration-[160ms] [transition-timing-function:var(--ease-strong-out)] hover:border-border-strong hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+          data-testid="open-help"
+          onClick={onOpenHelp}
+        >
+          How to start
+        </button>
+
         <div className="flex items-center gap-[7px] rounded-md border border-border-low bg-card px-3 py-2">
           <span
             aria-hidden

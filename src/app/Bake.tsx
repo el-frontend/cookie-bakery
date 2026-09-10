@@ -502,6 +502,9 @@ export function Bake({ client }: { client: AppClient }) {
       <Button
         data-testid="bake-review"
         disabled={!payer}
+        disabledReason={
+          payer ? undefined : "Connect a wallet to create a token."
+        }
         onClick={() => void review()}
         size="lg"
         className="enter enter-3 w-full"

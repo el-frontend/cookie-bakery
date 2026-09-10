@@ -1,4 +1,9 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { useId } from "react";
+import type {
+  AnchorHTMLAttributes,
+  ButtonHTMLAttributes,
+  ReactNode,
+} from "react";
 
 /**
  * The one pressable primitive.
@@ -37,6 +42,15 @@ const SIZES: Record<Size, string> = {
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
+  /**
+   * Why the button is unavailable, announced when it is `disabled` (RF-06.4).
+   *
+   * A disabled control with no explanation is a dead end for a screen reader:
+   * it says "button, dimmed" and nothing about what would enable it. The
+   * reason is linked with `aria-describedby` rather than replacing the label,
+   * so the button still announces what it does first.
+   */
+  disabledReason?: string;
   size?: Size;
   variant?: Variant;
 };
@@ -44,16 +58,69 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 export function Button({
   children,
   className = "",
+  disabledReason,
   size = "md",
   variant = "primary",
   ...props
 }: ButtonProps) {
+  const reasonId = useId();
+  const showReason = Boolean(props.disabled && disabledReason);
+
   return (
-    <button
-      className={`${BASE} ${VARIANTS[variant]} ${SIZES[size]} ${className}`}
-      {...props}
-    >
+    <>
+      <button
+        aria-describedby={showReason ? reasonId : undefined}
+        className={buttonClass({ className, size, variant })}
+        title={showReason ? disabledReason : props.title}
+        {...props}
+      >
+        {children}
+      </button>
+      {showReason ? (
+        <span className="sr-only" id={reasonId}>
+          {disabledReason}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
+/** The class string, so an anchor can look like a button without being one. */
+export function buttonClass({
+  className = "",
+  size = "md",
+  variant = "primary",
+}: {
+  className?: string;
+  size?: Size;
+  variant?: Variant;
+} = {}): string {
+  return `${BASE} ${VARIANTS[variant]} ${SIZES[size]} ${className}`;
+}
+
+export type ButtonLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
+  children: ReactNode;
+  size?: Size;
+  variant?: Variant;
+};
+
+/**
+ * A link wearing the button's clothes.
+ *
+ * Navigation is an anchor, not a button with an onClick: middle-click,
+ * cmd-click and "copy link" all have to keep working, and a screen reader
+ * should announce a destination rather than an action.
+ */
+export function ButtonLink({
+  children,
+  className = "",
+  size = "md",
+  variant = "primary",
+  ...props
+}: ButtonLinkProps) {
+  return (
+    <a className={buttonClass({ className, size, variant })} {...props}>
       {children}
-    </button>
+    </a>
   );
 }
