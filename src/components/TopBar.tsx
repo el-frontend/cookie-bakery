@@ -62,7 +62,7 @@ export function TopBar({
 
   return (
     <header className="flex flex-wrap items-center justify-between gap-4 border-b border-[#211d19] px-6 py-[18px] sm:px-8">
-      <div className="flex items-center gap-2.5">
+      <div className="flex flex-1 items-center justify-start gap-2.5">
         <span className="text-accent">
           <BakeryMark />
         </span>
@@ -92,7 +92,7 @@ export function TopBar({
         })}
       </nav>
 
-      <div className="flex items-center gap-2.5">
+      <div className="flex flex-1 items-center justify-end gap-2.5">
         <button
           className="rounded-md border border-border-low bg-card px-3 py-2 text-[12.5px] font-medium text-ink-2 transition-colors duration-[160ms] [transition-timing-function:var(--ease-strong-out)] hover:border-border-strong hover:text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           data-testid="open-help"
