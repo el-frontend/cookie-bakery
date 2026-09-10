@@ -23,18 +23,26 @@ Vitest is wired up (`jsdom` + `@testing-library/react`, config in `vitest.config
 
 ## Current state
 
-RF-01, RF-02 and RF-03 are built on the Kit plugin stack; **RF-04 (Oven), RF-06 (help) and RF-07 (delivery) are not**. `npm test` runs Vitest (253 tests). The scaffold's framework-kit is gone.
+**RF-01 … RF-06 are code complete. RF-07 is partial.** `npm test` runs Vitest (422 tests across 51 files); `npm run ci` is green. The scaffold's framework-kit is gone.
+
+What is left is work no code can finish — it needs a funded wallet on Cookie Chain and a human in a browser:
+
+- **RF-07.3 is blocked on real COOK**: the `Bakery Cookie (BAKE)` demo mint and its test airdrop. Without them there is no public URL, no screenshots, and AC-07.1/.3/.4 stay open.
+- Manual halves of AC-01.2/.3, AC-02.1/.2/.3, AC-03.1/.2, AC-04.1, AC-05.1 — every one is "do it against the real chain with Nightly and check CookieScan".
+- **AC-06.1** needs a person outside the project, and **incógnita #4** (does Token-2022 `TokenMetadata` work on this chain?) needs a real mint.
+
+Each plan's `**Status:**` line says exactly where it stands. Do not mark those green from a test run alone.
 
 - `src/main.tsx` — `Providers` → `App`
 - `src/providers.tsx` — the one client: `walletSigner({ chain })` then `solanaRpc({ maxConcurrency: 4, rpcUrl })`, exporting `client` and `type AppClient`.
-- `src/App.tsx` — the shell: top bar + section switch (`bake` | `airdrop` | `oven`); only the Oven is still a `ComingSoon`.
-- `src/app/` — `Bake.tsx` (RF-02), `Airdrop.tsx` (RF-03).
-- `src/lib/` — `chain/` (config, explorer), `token/` (bakeForm, sizing, the two builders, inspectMint), `airdrop/` (parseCsv, validateRows, mergeDuplicates, probeAtas, sourceAccount, buildPlan, executor, exportCsv), `errors/` (taxonomy + `mapError`), `format/`.
+- `src/App.tsx` — the shell: top bar + section switch (`bake` | `airdrop` | `oven`), footer, the help modal, and the one piece of cross-screen state (the token the Oven hands to Airdrop via "Airdrop more").
+- `src/app/` — `Bake.tsx` (RF-02), `Airdrop.tsx` (RF-03), `Oven.tsx` (RF-04).
+- `src/lib/` — `chain/` (config, explorer, `das.ts`, `links.ts`), `token/` (bakeForm, sizing, the two builders, inspectMint, readMint, holders, metadata, distribution), `airdrop/` (parseCsv, validateRows, mergeDuplicates, probeAtas, sourceAccount, buildPlan, executor, exportCsv), `errors/` (taxonomy + `mapError`), `format/` (address, lamports, `tokenAmount`).
 - `src/store/` — `myTokens.ts`, `airdropHistory.ts`, both versioned localStorage with forgiving reads.
 - `src/index.css` — Tailwind 4, warm-dark palette as CSS custom properties on `:root`, exposed through `@theme inline` (`bg-bg1`, `bg-card`, `text-ink-2`, `border-border-low`, `text-accent`, `text-danger`…). Add new colors as `--foo` on `:root` and map them in `@theme inline`; there is no `tailwind.config.js`, and the `--ease-strong-*` curves are used with `var()` (never re-declared in `@theme inline`).
-- `design/*.dc.html` — the redesign artboards, including the not-yet-built Oven. Match them when building a screen.
+- `design/*.dc.html` — the redesign artboards for every screen, including the Oven. Match them when building a screen.
 
-Still missing from RT-04's layout: `src/app/Help.tsx` (RF-06) and the Oven.
+RT-04's `src/app/Help.tsx` was not built as a screen: RF-06.1 specifies a modal reachable from every screen, so it is `src/components/GettingStartedModal.tsx`, opened from the top bar. RF-06.1 also named `Header.tsx`; the existing `TopBar.tsx` is that header and gained the trigger rather than being duplicated.
 
 ## Stack — non-negotiable
 
@@ -48,10 +56,17 @@ Per PRD RT-01, aligned with the vendored `solana-dev` skill. **Banned:** `@solan
 | React bindings            | `@solana/react`                                                 | **7.1+**  |
 | Data cache                | `swr` (via `@solana/react/swr`) — **not** TanStack Query        | —         |
 | Programs                  | `@solana-program/{token-2022,token,system,compute-budget,memo}` | —         |
+| Charts                    | `recharts` — **lazy-loaded**, see below                         | —         |
 
 Do not install: `@solana/kit-plugins`, `@solana/kit-plugin-airdrop`, `@solana/kit-plugin-payer`, `@solana/kit-client-*` (deprecated), or `@solana/kit-plugin-instruction-plan` (`solanaRpc` already bundles it).
 
 One client for the app, in `src/providers.tsx`, with `walletSigner` **before** `solanaRpc` (the RPC plugin requires a `payer`; TypeScript enforces the order). Export `type AppClient = Awaited<typeof client>` and always call `useClient<AppClient>()` — the type param is required as of `@solana/react` 7.1.
+
+### Bundle
+
+`recharts` is ~360 kB and `HoldersChart` is its only consumer, on one of three
+screens, so `src/app/Oven.tsx` loads it with `React.lazy`. Importing it eagerly
+anywhere puts it back in the initial bundle (820 kB → 461 kB was the difference).
 
 ## Closed decisions
 

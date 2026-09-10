@@ -87,13 +87,13 @@ Notas para RF-04:
 
 ## Incógnitas todavía abiertas
 
-| #   | Incógnita                                                                                              | Bloquea    | Cómo se resuelve                             |
-| --- | ------------------------------------------------------------------------------------------------------ | ---------- | -------------------------------------------- |
-| 1   | ~~Valor correcto de `VITE_WALLET_CHAIN`~~ **RESUELTA** → `solana:mainnet`                              | ~~RF-01~~  | Cerrada por la spike RF-01.1 (ver abajo)     |
-| 2   | ~~Si `client.sendTransaction` delega en `signAndSendTransactions` (RT-03.1)~~ **RESUELTA** → no delega | ~~todo~~   | Cerrada leyendo el código de Kit (ver abajo) |
-| 3   | ~~Si Nightly firma con blockhash de Cookie Chain (RT-03.2)~~ **RESUELTA** → sí firma                   | ~~RF-02+~~ | Cerrada con una tx real firmada (ver abajo)  |
-| 4   | Si la extensión `TokenMetadata` de Token-2022 funciona en esta cadena                                  | RF-02      | Crear un mint de prueba en fase 2            |
-| 5   | Orden y `limit` máximo de `getTokenAccounts` en la DAS                                                 | RF-04      | Probar al implementar RF-04                  |
+| #   | Incógnita                                                                                                                     | Bloquea    | Cómo se resuelve                             |
+| --- | ----------------------------------------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------- |
+| 1   | ~~Valor correcto de `VITE_WALLET_CHAIN`~~ **RESUELTA** → `solana:mainnet`                                                     | ~~RF-01~~  | Cerrada por la spike RF-01.1 (ver abajo)     |
+| 2   | ~~Si `client.sendTransaction` delega en `signAndSendTransactions` (RT-03.1)~~ **RESUELTA** → no delega                        | ~~todo~~   | Cerrada leyendo el código de Kit (ver abajo) |
+| 3   | ~~Si Nightly firma con blockhash de Cookie Chain (RT-03.2)~~ **RESUELTA** → sí firma                                          | ~~RF-02+~~ | Cerrada con una tx real firmada (ver abajo)  |
+| 4   | Si la extensión `TokenMetadata` de Token-2022 funciona en esta cadena                                                         | RF-02      | Crear un mint de prueba en fase 2            |
+| 5   | ~~Orden y `limit` máximo de `getTokenAccounts` en la DAS~~ **RESUELTA** → ordena por `amount` desc; `limit` se recorta a 1000 | ~~RF-04~~  | Cerrada por sondeo en vivo (ver abajo)       |
 
 ---
 
@@ -323,3 +323,130 @@ encadenar N prompts condenados. El usuario tiene "Reintentar" en ese lote y
 React y sin cliente: el runner recibe una función `send` inyectada, que es lo
 que permite testear pausa, reintento y "un fallo no toca los confirmados" sin
 cadena. La pantalla es `src/app/Airdrop.tsx`.
+
+---
+
+## 2026-09-10 · RF-04 · ✅ INCÓGNITA #5 RESUELTA — orden y límite de la DAS
+
+Sondeado en vivo contra `https://api.cookiescan.io`. Hacía falta un mint con
+holders de verdad: los primeros 400 que devuelve `searchAssets` tienen 1 holder
+cada uno. Con `2wPK38gv8dWU89K5zDAAULAihnU1sRocbpzwPP6twY7Q` (79 holders) las
+cuatro preguntas quedan cerradas.
+
+### 1. Sí viene ordenado por `amount` descendente
+
+```
+primeras cantidades: 484085512066266, 200000000536000, 100000000268000,
+                     100000000268000, 67453652285393, 12102378317789, …
+ordenado desc? True    ordenado asc? False    orden estable entre llamadas? True
+```
+
+**El top 20 es la página 1 con `limit: 20`.** No hace falta paginar 1.000
+holders para pintar veinte filas.
+
+> Aun así `holders.ts` **vuelve a ordenar en cliente**. El orden es una
+> propiedad observada del servidor de hoy, no un contrato que haya prometido
+> mantener; reordenar 20 elementos no cuesta nada y el día que cambie no
+> saldrán veinte filas mal.
+
+### 2. `limit` se **recorta en silencio a 1000**
+
+```
+limit=  100 → 100 (echo 100)      limit= 1000 → (echo 1000)
+limit=  500 → (echo 500)          limit= 1001 → echo 1000   ← recortado
+limit= 2000 → echo 1000           limit= 5000 → echo 1000   ← ni un error
+```
+
+No devuelve error: devuelve una página con `limit: 1000`. Un cliente que se
+creyera su propio número **pensaría tener todos los holders**. Por eso
+`das.ts` recorta antes de enviar (`clampLimit`), para que petición y respuesta
+no puedan discrepar.
+
+### 3. Paginación limpia
+
+`page` 1..N con `limit` cubre `total` exactamente una vez, sin solapes:
+30 + 30 + 19 = 79, 79 direcciones únicas, idénticas al conjunto completo.
+
+`getAllTokenAccounts` tiene además tres cortes independientes (página vacía,
+`total` alcanzado, `maxAccounts`) porque fiarse solo de `total` deja un bucle
+infinito ante un servidor que reporte más de lo que entrega.
+
+### 4. `params` es un OBJETO, confirmado por el error contrario
+
+```jsonc
+// params como array →
+{
+  "error": {
+    "code": -32602,
+    "message": "Either 'mint' or 'owner' parameter is required",
+  },
+}
+```
+
+### ⚠️ Hallazgo que cambió el diseño de RF-04.2
+
+**`getTokenLargestAccounts` no está en la DAS, está en el RPC** —
+`api.cookiescan.io` responde `-32601 Method not found`; `rpc.cookiescan.io` lo
+sirve. Y lo más importante:
+
+```jsonc
+// getTokenLargestAccounts en rpc.cookiescan.io
+{
+  "address": "CBkfnXvTtm6tP3MwxpxKu8E7CdtXaxdwHCyt7z5J4fAS",
+  "amount": "484085512066266",
+  "decimals": 6,
+  "uiAmount": 484085512.066266,
+  "uiAmountString": "484085512.066266",
+}
+```
+
+`address` es la **cuenta de token, NO el owner**. La DAS da los dos; el RPC solo
+la cuenta. Una tabla de holders con direcciones de ATA es casi inútil para una
+persona: buscaría en CookieScan una dirección que no es la suya.
+
+Por eso el fallback de `holders.ts` **descodifica esas 20 cuentas** con un
+`getMultipleAccounts` extra para recuperar el owner. Una petición más compra una
+tabla que se lee igual que la de la DAS. Si una cuenta no descodifica, el holder
+sobrevive con cuenta + cantidad y el owner queda `null`, etiquetado en la UI
+como "token account" — mejor que descartar al holder o inventarle un dueño.
+
+Verificado además que **el top-20 de la DAS y el del RPC coinciden** en las 20
+cantidades, así que el fallback no cambia los números, solo su procedencia.
+
+---
+
+## 2026-09-10 · RF-07.2 · Las dos decisiones de CSP
+
+El riesgo abierto de RF-07 pedía decidir explícitamente qué hacer con las
+imágenes remotas de la metadata. Decidido, y anotado aquí porque las dos
+directivas anchas de `vercel.json` **lo son a la fuerza, no por comodidad**.
+
+### `img-src 'self' https:`
+
+Las imágenes de la metadata apuntan por diseño a dominios que elige quien creó
+el token: gateways de IPFS, Arweave, CDNs cualesquiera. Restringirlo a una lista
+rompe la función. Se descartó el proxy (no hay backend: PRD RT-04) y se descartó
+el placeholder ciego (oculta información legítima del token).
+
+Riesgo residual aceptado: **la IP del visitante llega al host que eligió el
+creador del token**. Mitigado a medias con `referrerpolicy="no-referrer"`, que
+evita filtrar la URL de la página, pero la IP es inherente a mostrar una imagen
+remota. `data:` se rechaza en las dos capas: en código (`safeImageUrl`) y en la
+CSP.
+
+### `connect-src 'self' https: wss:`
+
+La app descarga el JSON de metadata de un origen que elige el creador, así que
+`connect-src` no puede ser una lista de hosts. La protección está en el código,
+no en la cabecera: solo `https:`, sin credenciales, sin referrer, timeout de 8 s,
+tope de 64 KiB **impuesto por streaming** (leerlo entero y luego medirlo no
+defiende de nada) y todas las cadenas aplanadas a texto plano.
+
+`wss:` va por esquema y no por host a propósito: con `https:` ya abierto el
+riesgo marginal es nulo, y una lista con `wss://rpc.cookiescan.io` dentro
+convertiría un cambio de `VITE_RPC_URL` en un websocket roto en silencio — el
+saldo dejaría de actualizarse en vivo sin ningún error visible.
+
+**`script-src 'self'` se queda estricto**, sin `unsafe-inline` ni `unsafe-eval`.
+`style-src` sí lleva `'unsafe-inline'`, que es lo que exigen los `style={{…}}`
+de React y los atributos que inyecta Recharts.
