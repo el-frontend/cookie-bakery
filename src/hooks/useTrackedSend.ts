@@ -27,7 +27,7 @@ export type TrackedSendState = {
  * reports a null signature: no explorer link on the toast, and callers that
  * key off the signature treat a confirmed transaction as a failure.
  */
-function readSignature(result: unknown): string | null {
+export function readSignature(result: unknown): string | null {
   if (typeof result === "string") return result;
   if (result && typeof result === "object") {
     const r = result as {

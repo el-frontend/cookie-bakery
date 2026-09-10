@@ -260,3 +260,66 @@ git show 555f918 -- src/dev/ChainProbe.tsx
 ```
 
 La idea clave a conservar si se rehace: enumerar con `getWallets()` de `@wallet-standard/app` (registro **crudo**), nunca con `useWallets(client)`, que filtra justo por la cadena que se quiere descubrir.
+
+---
+
+## 2026-09-10 · RF-03.7 · El planner parte, la app marca el ritmo
+
+El riesgo abierto de RF-03 preguntaba si `client.planTransactions` deja control
+suficiente por lote para "Pausar" y "Reintentar este lote". **No lo deja**, y la
+decisión es el fallback que el PRD ya autorizaba — con un matiz importante.
+
+### Lo que se comprobó en las librerías instaladas
+
+`ClientWithTransactionSending` (en `@solana/plugin-interfaces`, reexportado por
+`@solana/kit`) define exactamente esto:
+
+```ts
+sendTransactions: (input, config?: { abortSignal?: AbortSignal }) =>
+  Promise<TransactionPlanResult>;
+```
+
+Una sola promesa y un único `abortSignal`. No hay callback por transacción, no
+hay forma de detenerse entre dos de ellas, y abortar mata la tanda completa. Un
+`TransactionPlanResult` llega cuando ya no se puede hacer nada con él.
+
+`client.sendTransaction`, en cambio, acepta `InstructionPlanInput` y por dentro
+hace `client.planTransaction(input)` antes de ejecutar
+(`kit-plugin-instruction-plan`, `getTransactionExecutionFunctions`). Si las
+instrucciones no caben en una transacción, **lanza** en lugar de partirlas.
+
+### La decisión
+
+**La app decide cuántos destinatarios entran en cada transacción; el planner
+sigue construyendo cada una de ellas.** `splitIntoBatches` trocea la lista
+(4–12, default 8, y 6 cuando hay ATAs por crear — RT-05) y cada lote se manda
+con `client.sendTransaction(instrucciones)`.
+
+Esto **no** es reimplementar el planner: blockhash, compute budget y el límite
+de tamaño siguen siendo suyos, y si un lote no cupiera lo diría a gritos. Lo
+único que se le quitó es el ritmo.
+
+### Por qué esto es además _mejor_, no solo posible
+
+Se le pasan **instrucciones, nunca mensajes ya construidos**. Es la consecuencia
+directa del hallazgo del 2026-09-08: el blockhash caduca mientras la persona lee
+el prompt de la wallet. Planificar los N lotes de golpe le daría a los últimos
+un blockhash que expiró aprobando los primeros. Pidiendo el plan lote a lote,
+cada transacción recibe su lifetime en el momento de enviarse, y encima conserva
+**un reintento automático** (`mapError().retryable`: blockhash caducado y RPC
+caído; una firma rechazada no se reintenta).
+
+### Consecuencia de UI: un fallo detiene la tanda
+
+Cada lote es un prompt de wallet. Las causas habituales de fallo — COOK
+insuficiente, firma rechazada, RPC caído — fallarían igual en los lotes de
+detrás, así que el runner se **auto-pausa** en el primer fallo en lugar de
+encadenar N prompts condenados. El usuario tiene "Reintentar" en ese lote y
+"Reanudar" para el resto; los confirmados nunca se reenvían.
+
+### Dónde vive
+
+`src/lib/airdrop/executor.ts` (`splitIntoBatches`, `createAirdropRunner`), sin
+React y sin cliente: el runner recibe una función `send` inyectada, que es lo
+que permite testear pausa, reintento y "un fallo no toca los confirmados" sin
+cadena. La pantalla es `src/app/Airdrop.tsx`.

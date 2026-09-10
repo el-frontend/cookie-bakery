@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useClient } from "@solana/react";
 import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
+import { Airdrop } from "./app/Airdrop";
 import { Bake } from "./app/Bake";
 import { TopBar, type Section } from "./components/TopBar";
 import { WalletButton } from "./components/WalletButton";
@@ -34,14 +35,28 @@ export default function App() {
         <TopBar active={section} onNavigate={setSection} />
 
         <main className="flex flex-grow justify-center px-6 py-11 sm:px-8">
-          <div className="w-full max-w-[560px]">
-            {section === "bake" ? (
+          {/*
+           * Airdrop is wider than Bake on purpose: it carries a recipient
+           * table, and squeezing 44-character addresses into the form column
+           * would wrap every row.
+           */}
+          <div
+            className={
+              "w-full " +
+              (section === "airdrop" ? "max-w-[760px]" : "max-w-[560px]")
+            }
+          >
+            {section === "oven" ? (
+              <ComingSoon />
+            ) : (
               <div className="flex flex-col gap-6">
                 {connected ? null : <WalletButton client={client} />}
-                <Bake client={client} />
+                {section === "bake" ? (
+                  <Bake client={client} />
+                ) : (
+                  <Airdrop client={client} />
+                )}
               </div>
-            ) : (
-              <ComingSoon section={section} />
             )}
           </div>
         </main>
@@ -50,19 +65,13 @@ export default function App() {
   );
 }
 
-function ComingSoon({ section }: { section: Section }) {
-  const copy =
-    section === "airdrop"
-      ? {
-          detail:
-            "Paste a CSV, validate every row, and send in batches with a fresh blockhash per transaction.",
-          title: "Airdrop",
-        }
-      : {
-          detail:
-            "Supply, holders and the distribution of a mint you created, with the airdrops that produced it.",
-          title: "Oven",
-        };
+/** Only the Oven is left unbuilt; Bake and Airdrop are real screens. */
+function ComingSoon() {
+  const copy = {
+    detail:
+      "Supply, holders and the distribution of a mint you created, with the airdrops that produced it.",
+    title: "Oven",
+  };
 
   return (
     <section className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-border-strong bg-card/40 px-6 py-14 text-center">

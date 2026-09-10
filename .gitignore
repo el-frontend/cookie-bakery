@@ -33,3 +33,6 @@ lerna-debug.log*
 
 # Design canvas: the seeded payload is a build artifact, regenerate from design/*.dc.html
 design/cookie-bakery-redesign.html
+
+# Test runner scratch (JSON reporter output)
+.vitest

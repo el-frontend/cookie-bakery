@@ -19,18 +19,22 @@ npm run format:check  # prettier --check .
 npm run ci            # build + lint + format:check — must be green before shipping
 ```
 
-No test runner is wired up yet. The PRD requires Vitest for `lib/airdrop` (CSV parser/validator, batching, cost estimation) and `lib/errors` (error mapping); add `vitest` + `@testing-library/react` + `jsdom` and a `test` script when starting those modules. Run a single test with `npx vitest run src/lib/airdrop/csv.test.ts`.
+Vitest is wired up (`jsdom` + `@testing-library/react`, config in `vitest.config.ts`, which also supplies the `VITE_*` env the modules read). `npm test` runs everything; a single file is `npx vitest run src/lib/airdrop/parseCsv.test.ts`. `npm run ci` does **not** run the tests — run both before shipping.
 
 ## Current state
 
-Still the unmodified `solana-foundation/templates/kit/react-vite` scaffold, which ships **framework-kit** (`@solana/client` + `@solana/react-hooks`). PRD §6 replaces that stack — do this before any feature work.
+RF-01, RF-02 and RF-03 are built on the Kit plugin stack; **RF-04 (Oven), RF-06 (help) and RF-07 (delivery) are not**. `npm test` runs Vitest (253 tests). The scaffold's framework-kit is gone.
 
 - `src/main.tsx` — `Providers` → `App`
-- `src/providers.tsx` — `createClient({ endpoint, walletConnectors: autoDiscover() })` + `SolanaProvider`, endpoint hardcoded to `https://api.devnet.solana.com`. **Rewrite entirely** per PRD §6.
-- `src/App.tsx` — demo wallet UI on `useWalletConnection()`; replace with the `@solana/kit-plugin-wallet/react` hooks.
-- `src/index.css` — Tailwind 4 with CSS custom properties in `:root` + a `prefers-color-scheme: dark` block, exposed to Tailwind through `@theme inline` (`bg-bg1`, `text-muted`, `border-border-low`, `bg-cream`, `bg-card`, `text-primary`…). Add new colors as `--foo` in **both** `:root` blocks and map them in `@theme inline`; there is no `tailwind.config.js`.
+- `src/providers.tsx` — the one client: `walletSigner({ chain })` then `solanaRpc({ maxConcurrency: 4, rpcUrl })`, exporting `client` and `type AppClient`.
+- `src/App.tsx` — the shell: top bar + section switch (`bake` | `airdrop` | `oven`); only the Oven is still a `ComingSoon`.
+- `src/app/` — `Bake.tsx` (RF-02), `Airdrop.tsx` (RF-03).
+- `src/lib/` — `chain/` (config, explorer), `token/` (bakeForm, sizing, the two builders, inspectMint), `airdrop/` (parseCsv, validateRows, mergeDuplicates, probeAtas, sourceAccount, buildPlan, executor, exportCsv), `errors/` (taxonomy + `mapError`), `format/`.
+- `src/store/` — `myTokens.ts`, `airdropHistory.ts`, both versioned localStorage with forgiving reads.
+- `src/index.css` — Tailwind 4, warm-dark palette as CSS custom properties on `:root`, exposed through `@theme inline` (`bg-bg1`, `bg-card`, `text-ink-2`, `border-border-low`, `text-accent`, `text-danger`…). Add new colors as `--foo` on `:root` and map them in `@theme inline`; there is no `tailwind.config.js`, and the `--ease-strong-*` curves are used with `var()` (never re-declared in `@theme inline`).
+- `design/*.dc.html` — the redesign artboards, including the not-yet-built Oven. Match them when building a screen.
 
-Target layout (RT-04): `src/app/` (Bake, Airdrop, Oven, Help), `src/components/`, `src/lib/{chain,token,airdrop,errors}/`, `src/hooks/`, `src/store/` (localStorage: "my tokens", airdrop history).
+Still missing from RT-04's layout: `src/app/Help.tsx` (RF-06) and the Oven.
 
 ## Stack — non-negotiable
 
@@ -73,7 +77,9 @@ Native token is **COOK**, 9 decimals, so Kit's `lamportsToSol` / `solToLamports`
 
 ### Airdrop batching (RT-05)
 
-Prefer `client.planTransactions(...)` — the Kit planner splits instructions across the minimum number of transactions and handles blockhash refresh + compute budget. Fall back to manual batching (default 8 transfers/tx, 6–7 with new ATAs, configurable 4–12) only if per-batch pause/retry UI demands it. Each transfer is `createAssociatedTokenAccountIdempotent` + `transferChecked`. ATA existence via `getMultipleAccounts` in blocks of 100; `solanaRpc({ maxConcurrency: 4 })` caps concurrent transactions (default 10) and the app caps concurrent reads — the RPC is community-run. Cap of 1,000 CSV rows in v1.
+**Decided (RF-03.7): the app batches, the planner still builds each transaction.** `sendTransactions` is one opaque promise with a single `abortSignal` — no per-batch callback and no way to stop between transactions, which RF-03's Pause/Retry needs. So `splitIntoBatches` cuts the list (default 8 transfers/tx, 6 with new ATAs, clamped 4–12) and each batch goes through `client.sendTransaction(instructions)`, which plans that one transaction (blockhash, compute budget, size limit) and throws if it does not fit. **Pass instructions, never pre-built messages** — that is what gives every batch a fresh blockhash at send time, which matters because on Cookie Chain the blockhash expires while a human reads the wallet prompt. Rationale in `docs/decisions.md`; do not "restore" `sendTransactions` here.
+
+Each transfer is `createAssociatedTokenAccountIdempotent` + `transferChecked`. ATA existence via `getMultipleAccounts` in blocks of 100; `solanaRpc({ maxConcurrency: 4 })` caps concurrent transactions (default 10) and the app caps concurrent reads — the RPC is community-run. Cap of 1,000 CSV rows in v1.
 
 ### Token-2022 specifics
 
