@@ -81,11 +81,20 @@ describe("Toast", () => {
   });
 
   it("se puede cerrar a mano", async () => {
-    const user = userEvent.setup();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderWith([{ title: "Boom", variant: "error" }]);
     await user.click(screen.getByRole("button", { name: "fire" }));
 
     await user.click(screen.getByRole("button", { name: /Dismiss/ }));
+
+    // Dismissed toasts stay mounted for the length of their exit transition —
+    // a node removed on click cannot animate out.
+    expect(screen.getByTestId("toast")).toHaveAttribute("data-leaving", "true");
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(500);
+    });
     expect(screen.queryByTestId("toast")).toBeNull();
   });
 

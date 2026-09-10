@@ -382,7 +382,7 @@ export function Bake({ client }: { client: AppClient }) {
 
         <div className="h-px bg-border-low" />
 
-        <details className="group">
+        <details className="disclosure group">
           <summary className="flex cursor-pointer list-none items-center gap-2.5 text-sm font-semibold marker:content-none">
             <svg
               width="18"

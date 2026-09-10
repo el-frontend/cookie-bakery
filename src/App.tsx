@@ -26,7 +26,12 @@ import { client, type AppClient } from "./providers";
 export default function App() {
   const [section, setSection] = useState<Section>("bake");
   const [helpOpen, setHelpOpen] = useState(false);
+  const [helpClosing, setHelpClosing] = useState(false);
   const [handoffToken, setHandoffToken] = useState<SelectedToken | null>(null);
+  // The staggered entrance is an introduction, and an introduction only works
+  // once. After the first navigation the same 360ms cascade is just latency on
+  // the most repeated interaction in the app, so `data-nav` shortens it.
+  const [hasNavigated, setHasNavigated] = useState(false);
 
   // The top bar already carries the address and balance, so the full wallet
   // panel is only worth its space while there is nothing connected.
@@ -37,11 +42,23 @@ export default function App() {
     // Only the Oven's explicit handoff should preselect a token; arriving at
     // Airdrop from the nav must start clean.
     setHandoffToken(null);
+    setHasNavigated(true);
+  }, []);
+
+  // The modal outlives its own close by the length of the scrim's fade: a
+  // dialog unmounted on click cannot animate out.
+  const closeHelp = useCallback(() => {
+    setHelpClosing(true);
+    setTimeout(() => {
+      setHelpOpen(false);
+      setHelpClosing(false);
+    }, 140);
   }, []);
 
   const airdropToken = useCallback((token: SelectedToken) => {
     setHandoffToken(token);
     setSection("airdrop");
+    setHasNavigated(true);
   }, []);
 
   return (
@@ -62,7 +79,10 @@ export default function App() {
           onOpenHelp={() => setHelpOpen(true)}
         />
 
-        <main className="flex flex-grow justify-center px-6 py-11 sm:px-8">
+        <main
+          className="flex flex-grow justify-center px-6 py-11 sm:px-8"
+          data-nav={hasNavigated ? "repeat" : "first"}
+        >
           {/*
            * Airdrop and Oven are wider than Bake on purpose: both carry
            * tables, and squeezing 44-character addresses into the form column
@@ -100,7 +120,7 @@ export default function App() {
       </div>
 
       {helpOpen ? (
-        <GettingStartedModal onClose={() => setHelpOpen(false)} />
+        <GettingStartedModal isClosing={helpClosing} onClose={closeHelp} />
       ) : null}
     </div>
   );

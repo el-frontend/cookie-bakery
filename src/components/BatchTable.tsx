@@ -73,6 +73,7 @@ export function BatchTable({
             <span
               className={
                 "ml-auto rounded-chip px-2.5 py-[3px] text-[11px] font-semibold " +
+                "transition-colors duration-[160ms] [transition-timing-function:var(--ease-strong-out)] " +
                 PILL[batch.status]
               }
               data-testid={`batch-status-${batch.index}`}
@@ -106,7 +107,7 @@ export function BatchTable({
           </div>
 
           {batch.error ? (
-            <p className="text-[12.5px] leading-relaxed text-danger">
+            <p className="enter text-[12.5px] leading-relaxed text-danger">
               <span className="font-semibold">{batch.error.title}</span> —{" "}
               {batch.error.detail}
             </p>

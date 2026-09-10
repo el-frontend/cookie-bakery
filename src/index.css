@@ -16,6 +16,9 @@
 :root {
   color-scheme: dark;
 
+  /* What makes `block-size: auto` animatable, for .disclosure below. */
+  interpolate-size: allow-keywords;
+
   /* Surfaces */
   --canvas: #0f0d0b;
   --surface: #171412;
@@ -197,6 +200,22 @@
     transition-delay: 120ms;
   }
 
+  /*
+   * After the first navigation the entrance stops being an introduction and
+   * becomes latency: switching sections is the most repeated action here, and
+   * a 240ms transition behind a 120ms delay means 360ms before the screen is
+   * still. Same curve, a third of the distance, no cascade. The attribute
+   * selector outranks .enter-1/2/3 on its own, so no !important is needed.
+   */
+  [data-nav="repeat"] {
+    --enter-shift: 4px;
+  }
+
+  [data-nav="repeat"] .enter {
+    transition-duration: 140ms;
+    transition-delay: 0ms;
+  }
+
   /* For the success card — the one screen rare enough to spend delight on. */
   .pop-in {
     opacity: 1;
@@ -211,6 +230,50 @@
     }
   }
 
+  /*
+   * Toasts. Transitions, not keyframes: a second toast must not restart the
+   * first, and a dismissal that lands mid-entrance has to retarget from
+   * wherever the card currently is. The exit is shorter than the entrance —
+   * the arrival has to be noticed, the departure only has to not be abrupt.
+   */
+  .toast-item {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity 240ms var(--ease-strong-out),
+      transform 240ms var(--ease-strong-out);
+
+    @starting-style {
+      opacity: 0;
+      transform: translateY(var(--enter-shift));
+    }
+  }
+
+  .toast-item[data-leaving="true"] {
+    opacity: 0;
+    transform: translateY(4px);
+    transition-duration: 180ms;
+  }
+
+  /*
+   * The modal scrim. It covers the whole app, so snapping it on is the most
+   * abrupt thing this UI can do; the dialog inside it uses .pop-in.
+   */
+  .scrim {
+    opacity: 1;
+    transition: opacity 200ms var(--ease-strong-out);
+
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  /* Leaving is quicker than arriving: the user has already decided. */
+  .scrim[data-closing="true"] {
+    opacity: 0;
+    transition-duration: 140ms;
+  }
+
   /* The confirmation tick draws itself once. One-shot, never re-triggered. */
   .check-draw {
     stroke-dasharray: 26;
@@ -221,6 +284,73 @@
   @keyframes check-draw {
     to {
       stroke-dashoffset: 0;
+    }
+  }
+
+  /*
+   * The chevron on a disclosure already turns in 200ms; the panel it points at
+   * has to move in the same 200ms or the rotation just announces a snap. This
+   * animates a layout property, which everything else here avoids — allowed
+   * because it is one user-initiated expansion of a form section, never
+   * something that runs while the app is talking to the chain. Where
+   * ::details-content is unsupported the panel opens instantly, as it does
+   * today.
+   */
+  .disclosure::details-content {
+    block-size: 0;
+    overflow: hidden;
+    transition:
+      block-size 200ms var(--ease-strong-out),
+      content-visibility 200ms allow-discrete;
+  }
+
+  .disclosure[open]::details-content {
+    block-size: auto;
+  }
+
+  /*
+   * The wait is unbounded — a simulation, a human reading a wallet prompt, a
+   * confirmation on a community RPC. A determinate bar would be a lie, so this
+   * is a sweep: it says "still working", not "this much left". Constant motion
+   * is linear by definition, and it rides a pseudo-element's transform so it
+   * never touches layout.
+   */
+  .indeterminate {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .indeterminate::after {
+    content: "";
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: 0;
+    block-size: 2px;
+    inline-size: 40%;
+    background: currentColor;
+    opacity: 0.45;
+    animation: indeterminate 1200ms linear infinite;
+  }
+
+  @keyframes indeterminate {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(350%);
+    }
+  }
+
+  /*
+   * The global reduced-motion rule pins animation-duration, not the name, so
+   * switching the name off here is what actually stops it. What is left is a
+   * static bar: still a visible "busy", with nothing moving.
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .indeterminate::after {
+      animation-name: none;
+      inline-size: 100%;
+      opacity: 0.25;
     }
   }
 }

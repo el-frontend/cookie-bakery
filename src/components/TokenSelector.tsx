@@ -123,7 +123,7 @@ export function TokenSelector({
     return (
       <div
         data-testid="token-selected"
-        className="flex items-center gap-3.5 rounded-xl border border-border-low bg-card px-5 py-4"
+        className="pop-in flex items-center gap-3.5 rounded-xl border border-border-low bg-card px-5 py-4"
       >
         <Avatar label={value.symbol || value.name} />
         <div className="flex min-w-0 flex-col gap-0.5">
@@ -149,7 +149,7 @@ export function TokenSelector({
   }
 
   return (
-    <div className="flex flex-col gap-4 rounded-xl border border-border-low bg-card p-5">
+    <div className="enter flex flex-col gap-4 rounded-xl border border-border-low bg-card p-5">
       {mine.length > 0 ? (
         <div className="flex flex-col gap-2">
           <span className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-3">

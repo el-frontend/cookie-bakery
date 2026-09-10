@@ -276,7 +276,9 @@ export function BakeSummary({
           disabled={blocked}
           onClick={onSubmit}
           size="lg"
-          className="w-full"
+          className={
+            isPlanning || isSending ? "w-full indeterminate" : "w-full"
+          }
         >
           {isPlanning ? null : (
             <svg

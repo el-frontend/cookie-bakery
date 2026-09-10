@@ -440,10 +440,16 @@ export function Airdrop({
           className="h-2 w-full overflow-hidden rounded-full bg-raised"
           role="progressbar"
         >
+          {/*
+           * scaleX, not width: the track already clips this to a rounded
+           * shape, so the fill stays square and the browser never leaves the
+           * compositor. `origin-left` is what keeps it growing from the start
+           * of the bar rather than from its middle.
+           */}
           <div
-            className="h-full rounded-full bg-accent transition-[width] duration-[320ms] [transition-timing-function:var(--ease-strong-out)]"
+            className="h-full w-full origin-left bg-accent transition-transform duration-[320ms] [transition-timing-function:var(--ease-strong-out)]"
             style={{
-              width: `${summary.total === 0 ? 0 : (summary.confirmed / summary.total) * 100}%`,
+              transform: `scaleX(${summary.total === 0 ? 0 : summary.confirmed / summary.total})`,
             }}
           />
         </div>
@@ -684,7 +690,7 @@ export function Airdrop({
             </Button>
           ) : (
             <Button
-              className="w-full"
+              className={isPreparing ? "w-full indeterminate" : "w-full"}
               data-testid="airdrop-prepare"
               disabled={!canPrepare || isPreparing}
               disabledReason={prepareBlockedReason ?? undefined}

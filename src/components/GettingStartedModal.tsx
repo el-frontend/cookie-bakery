@@ -50,7 +50,14 @@ function Step({
   );
 }
 
-export function GettingStartedModal({ onClose }: { onClose: () => void }) {
+export function GettingStartedModal({
+  isClosing = false,
+  onClose,
+}: {
+  /** Closing, but still mounted for the length of the scrim's fade out. */
+  isClosing?: boolean;
+  onClose: () => void;
+}) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
 
@@ -105,7 +112,8 @@ export function GettingStartedModal({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-5"
+      className="scrim fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/70 p-5"
+      data-closing={isClosing ? "true" : undefined}
       data-testid="getting-started-backdrop"
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
@@ -114,7 +122,7 @@ export function GettingStartedModal({ onClose }: { onClose: () => void }) {
       <div
         aria-labelledby="getting-started-title"
         aria-modal="true"
-        className="w-full max-w-[520px] rounded-xl border border-border-strong bg-card p-6 shadow-2xl"
+        className="pop-in w-full max-w-[520px] rounded-xl border border-border-strong bg-card p-6 shadow-2xl"
         data-testid="getting-started-modal"
         ref={dialogRef}
         role="dialog"

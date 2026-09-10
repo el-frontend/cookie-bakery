@@ -41,14 +41,14 @@ export function ProgramLogViewer({
         <button
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="rounded-lg border border-border-low bg-card px-2 py-1 text-xs font-medium cursor-pointer transition hover:-translate-y-0.5 hover:shadow-sm"
+          className="rounded-lg border border-border-low bg-card px-2 py-1 text-xs font-medium cursor-pointer transition-[transform,background-color,border-color,color] duration-[160ms] [transition-timing-function:var(--ease-strong-out)] hover:border-border-strong active:scale-[0.97]"
         >
           {open ? "Hide logs" : "View logs"}
         </button>
         {open ? (
           <button
             onClick={copy}
-            className="rounded-lg border border-border-low bg-card px-2 py-1 text-xs font-medium cursor-pointer transition hover:-translate-y-0.5 hover:shadow-sm"
+            className="rounded-lg border border-border-low bg-card px-2 py-1 text-xs font-medium cursor-pointer transition-[transform,background-color,border-color,color] duration-[160ms] [transition-timing-function:var(--ease-strong-out)] hover:border-border-strong active:scale-[0.97]"
           >
             {copied ? "Copied" : "Copy"}
           </button>

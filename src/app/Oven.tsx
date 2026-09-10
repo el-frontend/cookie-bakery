@@ -255,7 +255,7 @@ export function Oven({
 
       {loaded && label ? (
         <>
-          <header className="flex flex-wrap items-center gap-4 rounded-xl border border-border-low bg-card p-5">
+          <header className="enter enter-1 flex flex-wrap items-center gap-4 rounded-xl border border-border-low bg-card p-5">
             {loaded.metadata?.image ? (
               /*
                * `referrerPolicy` stops the token creator's server learning
@@ -309,7 +309,7 @@ export function Oven({
             </div>
           </header>
 
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+          <div className="enter enter-2 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
             <Stat
               label="Total supply"
               value={formatTokenAmount(
@@ -332,7 +332,7 @@ export function Oven({
             />
           </div>
 
-          <div className="flex flex-col gap-3.5 rounded-xl border border-border-low bg-card p-5">
+          <div className="enter enter-3 flex flex-col gap-3.5 rounded-xl border border-border-low bg-card p-5">
             <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-3">
               Mint authorities
             </h3>
@@ -348,7 +348,7 @@ export function Oven({
             </div>
           </div>
 
-          <div className="flex flex-col gap-3.5 rounded-xl border border-border-low bg-card p-5">
+          <div className="enter enter-3 flex flex-col gap-3.5 rounded-xl border border-border-low bg-card p-5">
             <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-3">
               Extensions
             </h3>
@@ -397,7 +397,7 @@ export function Oven({
             total={loaded.holders.total}
           />
 
-          <div className="flex flex-col gap-2">
+          <div className="enter enter-3 flex flex-col gap-2">
             <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-3">
               Airdrops from this device
             </h3>

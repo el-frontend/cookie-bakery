@@ -8,8 +8,15 @@ import {
 } from "../lib/toast/types";
 import { Toast } from "./Toast";
 
+/**
+ * How long a dismissed toast stays mounted so it can play its exit. Must match
+ * the `[data-leaving]` transition duration in `index.css`.
+ */
+const LEAVE_MS = 180;
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastModel[]>([]);
+  const [leaving, setLeaving] = useState<readonly number[]>([]);
   const nextId = useRef(1);
   const timers = useRef(new Map<number, ReturnType<typeof setTimeout>>());
 
@@ -19,7 +26,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       clearTimeout(timer);
       timers.current.delete(id);
     }
-    setToasts((current) => current.filter((t) => t.id !== id));
+    // Marked first, removed later: a toast that vanished from the DOM cannot
+    // animate. The exit timer reuses the same map, so a second dismiss for the
+    // same id still cancels it.
+    setLeaving((current) =>
+      current.includes(id) ? current : [...current, id]
+    );
+    timers.current.set(
+      id,
+      setTimeout(() => {
+        timers.current.delete(id);
+        setToasts((current) => current.filter((t) => t.id !== id));
+        setLeaving((current) => current.filter((entry) => entry !== id));
+      }, LEAVE_MS)
+    );
   }, []);
 
   const scheduleDismiss = useCallback(
@@ -73,7 +93,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         className="pointer-events-none fixed bottom-4 right-4 z-50 flex list-none flex-col gap-3 p-0"
       >
         {toasts.map((toast) => (
-          <Toast key={toast.id} toast={toast} onDismiss={dismiss} />
+          <Toast
+            isLeaving={leaving.includes(toast.id)}
+            key={toast.id}
+            toast={toast}
+            onDismiss={dismiss}
+          />
         ))}
       </ul>
     </ToastContext.Provider>

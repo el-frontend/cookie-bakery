@@ -65,7 +65,7 @@ export function WalletPanel({ client }: { client: ClientWithWallet }) {
           <button
             onClick={() => disconnect()}
             disabled={isDisconnecting}
-            className="inline-flex items-center gap-2 rounded-lg border border-border-low bg-card px-3 py-2 font-medium transition hover:-translate-y-0.5 hover:shadow-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-lg border border-border-low bg-card px-3 py-2 font-medium transition-[transform,background-color,border-color,color] duration-[160ms] [transition-timing-function:var(--ease-strong-out)] hover:border-border-strong active:scale-[0.97] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isDisconnecting ? "Disconnecting…" : "Disconnect"}
           </button>
@@ -79,7 +79,7 @@ export function WalletPanel({ client }: { client: ClientWithWallet }) {
               <button
                 onClick={() => connect(wallet)}
                 disabled={isConnecting}
-                className="group flex w-full items-center justify-between rounded-xl border border-border-low bg-card px-4 py-3 text-left text-sm font-medium transition hover:-translate-y-0.5 hover:shadow-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+                className="group flex w-full items-center justify-between rounded-xl border border-border-low bg-card px-4 py-3 text-left text-sm font-medium transition-[transform,background-color,border-color,color] duration-[160ms] [transition-timing-function:var(--ease-strong-out)] hover:border-border-strong active:scale-[0.97] cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <span className="flex flex-col">
                   <span className="text-base">{wallet.name}</span>
@@ -89,7 +89,7 @@ export function WalletPanel({ client }: { client: ClientWithWallet }) {
                 </span>
                 <span
                   aria-hidden
-                  className="h-2.5 w-2.5 rounded-full bg-border-low transition group-hover:bg-primary/80"
+                  className="h-2.5 w-2.5 rounded-full bg-border-low transition-colors duration-[160ms] [transition-timing-function:var(--ease-strong-out)] group-hover:bg-primary/80"
                 />
               </button>
             </li>

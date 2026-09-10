@@ -39,7 +39,7 @@ export function AddressChip({ address }: { address: string }) {
       <button
         onClick={copy}
         aria-label={`Copy address ${address}`}
-        className="rounded-lg border border-border-low bg-card px-2 py-2 text-xs font-medium transition hover:-translate-y-0.5 hover:shadow-sm cursor-pointer"
+        className="rounded-lg border border-border-low bg-card px-2 py-2 text-xs font-medium transition-[transform,background-color,border-color,color] duration-[160ms] [transition-timing-function:var(--ease-strong-out)] hover:border-border-strong active:scale-[0.97] cursor-pointer"
       >
         {copied ? "Copied" : "Copy"}
       </button>

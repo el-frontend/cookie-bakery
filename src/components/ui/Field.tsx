@@ -105,7 +105,7 @@ export function Checkbox({
         aria-hidden
         className={
           "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border " +
-          "transition-[background-color,border-color,transform] duration-[160ms] [transition-timing-function:var(--ease-strong-out)] " +
+          "transition-[background-color,border-color] duration-[160ms] [transition-timing-function:var(--ease-strong-out)] " +
           "peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent " +
           (checked
             ? "border-accent bg-accent"
@@ -118,8 +118,11 @@ export function Checkbox({
           viewBox="0 0 24 24"
           fill="none"
           className={
-            "transition-opacity duration-[120ms] " +
-            (checked ? "opacity-100" : "opacity-0")
+            // The tick grows into the box on the box's own timing, so checking
+            // reads as one movement. Never from scale(0): it comes from
+            // something, not from nothing.
+            "transition-[opacity,transform] duration-[160ms] [transition-timing-function:var(--ease-strong-out)] " +
+            (checked ? "opacity-100 scale-100" : "opacity-0 scale-75")
           }
         >
           <path

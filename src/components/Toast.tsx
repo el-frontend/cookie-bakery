@@ -15,9 +15,12 @@ const VARIANT_LABEL: Record<ToastModel["variant"], string> = {
 };
 
 export function Toast({
+  isLeaving = false,
   onDismiss,
   toast,
 }: {
+  /** Dismissed, but still mounted for the length of its exit transition. */
+  isLeaving?: boolean;
   onDismiss: (id: number) => void;
   toast: ToastModel;
 }) {
@@ -28,14 +31,15 @@ export function Toast({
       role={toast.variant === "error" ? "alert" : "status"}
       data-testid="toast"
       data-variant={toast.variant}
-      className={`pointer-events-auto w-full max-w-sm space-y-1 rounded-xl border ${VARIANT_STYLE[toast.variant]} bg-card p-4 text-sm shadow-[0_20px_60px_-40px_rgba(0,0,0,0.5)]`}
+      data-leaving={isLeaving ? "true" : undefined}
+      className={`toast-item pointer-events-auto w-full max-w-sm space-y-1 rounded-xl border ${VARIANT_STYLE[toast.variant]} bg-card p-4 text-sm shadow-[0_20px_60px_-40px_rgba(0,0,0,0.5)]`}
     >
       <div className="flex items-start justify-between gap-3">
         <p className="font-medium">{toast.title}</p>
         <button
           onClick={() => onDismiss(toast.id)}
           aria-label={`Dismiss: ${toast.title}`}
-          className="-mt-1 rounded px-1 text-muted transition hover:text-foreground cursor-pointer"
+          className="-mt-1 rounded px-1 text-muted transition-colors duration-[160ms] [transition-timing-function:var(--ease-strong-out)] hover:text-foreground cursor-pointer"
         >
           ×
         </button>
