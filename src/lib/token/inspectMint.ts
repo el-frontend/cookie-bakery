@@ -8,6 +8,7 @@ import { TOKEN_PROGRAM_ADDRESS } from "@solana-program/token";
 import {
   getMintDecoder,
   TOKEN_2022_PROGRAM_ADDRESS,
+  type Extension,
 } from "@solana-program/token-2022";
 
 /**
@@ -28,6 +29,14 @@ export type TokenProgramKind = "token" | "token-2022";
 export type MintInfo = {
   address: Address;
   decimals: number;
+  /**
+   * Token-2022 extensions present on the mint, decoded (RF-04.3).
+   *
+   * Always an array — a classic SPL mint simply has none, which is different
+   * from "we did not look". `src/lib/token/readMint.ts` turns these into the
+   * labels the Oven renders.
+   */
+  extensions: readonly Extension[];
   freezeAuthority: Address | null;
   mintAuthority: Address | null;
   program: TokenProgramKind;
@@ -80,12 +89,34 @@ export async function inspectMint(
   return {
     address: mint,
     decimals: decoded.decimals,
+    extensions: unwrapExtensions(decoded.extensions),
     freezeAuthority: unwrapOption(decoded.freezeAuthority),
     mintAuthority: unwrapOption(decoded.mintAuthority),
     program,
     programAddress: account.programAddress,
     supply: decoded.supply,
   };
+}
+
+/**
+ * `extensions` is an `Option<Array<Extension>>`: `None` on a classic mint, and
+ * on a Token-2022 mint with no extensions either. Both collapse to `[]` — the
+ * caller cares whether there ARE extensions, not how the absence was encoded.
+ *
+ * `Uninitialized` entries are dropped: they are padding in the account's TLV
+ * region, not a feature anyone turned on, and listing them in the UI as an
+ * active extension would be simply wrong.
+ */
+function unwrapExtensions(option: unknown): readonly Extension[] {
+  let list: unknown = option;
+  if (option && typeof option === "object" && "__option" in option) {
+    const opt = option as { __option: string; value?: unknown };
+    list = opt.__option === "Some" ? opt.value : null;
+  }
+  if (!Array.isArray(list)) return [];
+  return (list as Extension[]).filter(
+    (extension) => extension?.__kind !== "Uninitialized"
+  );
 }
 
 /** Kit options are `{__option: "Some"|"None"}`; the UI only wants the value. */
