@@ -1295,8 +1295,8 @@ RLS is the only security boundary in the system and the thing protecting a creat
 Load `supabase:supabase` and `supabase:supabase-postgres-best-practices` **before writing SQL** — they carry the current RLS and migration idioms.
 
 ```bash
-npx supabase init
-npx supabase start
+./node_modules/.bin/supabase init
+./node_modules/.bin/supabase start
 ```
 
 Record the local anon key and API URL that `supabase start` prints.
@@ -1310,13 +1310,13 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 /**
  * RLS is the only security boundary in this feature, so it is tested against
- * real Postgres rather than mocked. Needs `npx supabase start` running.
+ * real Postgres rather than mocked. Needs `./node_modules/.bin/supabase start` running.
  *
  * Skipped automatically when the local stack is not up, so `npm test` stays
  * green on a machine without Docker — but `npm run test:rls` fails loudly.
  */
 
-const URL = process.env.SUPABASE_LOCAL_URL ?? "http://127.0.0.1:54321";
+const URL = process.env.SUPABASE_LOCAL_URL ?? "http://127.0.0.1:55321";
 const ANON = process.env.SUPABASE_LOCAL_ANON_KEY ?? "";
 const SERVICE = process.env.SUPABASE_LOCAL_SERVICE_KEY ?? "";
 
@@ -1510,7 +1510,7 @@ Expected: FAIL — the tables do not exist yet. **If every test reports as skipp
 - [ ] **Step 4: Write the migration**
 
 ```bash
-npx supabase migration new creator_events
+./node_modules/.bin/supabase migration new creator_events
 ```
 
 Fill the generated file with the schema from spec §4.1 plus these policies. Copy the table definitions verbatim from the spec — it is the source of truth for columns and types — then append:
@@ -1745,7 +1745,7 @@ Note on `set search_path = ''`: with an empty search path every reference has to
 - [ ] **Step 4b: Run the advisors before moving on**
 
 ```bash
-npx supabase db advisors
+./node_modules/.bin/supabase db advisors
 ```
 
 Fix anything it reports. This is the check that catches an exposed table with RLS off, or a definer-rights function left callable — exactly the class of mistake the notes above are guarding against, and it is cheap to run.
@@ -1753,14 +1753,14 @@ Fix anything it reports. This is the check that catches an exposed table with RL
 - [ ] **Step 5: Apply the migration and add the env plumbing**
 
 ```bash
-npx supabase migration up
+./node_modules/.bin/supabase migration up
 ```
 
 Add to `vitest.config.ts` inside `test.env`, so the modules that read config do not throw during unrelated tests:
 
 ```ts
       VITE_SUPABASE_ANON_KEY: "test-anon-key",
-      VITE_SUPABASE_URL: "http://127.0.0.1:54321",
+      VITE_SUPABASE_URL: "http://127.0.0.1:55321",
 ```
 
 Add to `.env.example`:
@@ -1823,7 +1823,7 @@ git commit -m "feat(events): schema and row level security, tested against Postg
 - [ ] **Step 1: Generate the database types**
 
 ```bash
-npx supabase gen types typescript --local > src/lib/supabase/types.ts
+./node_modules/.bin/supabase gen types typescript --local > src/lib/supabase/types.ts
 ```
 
 - [ ] **Step 2: Write the failing test for amount parsing and the registration outcome**
@@ -3387,7 +3387,7 @@ Follow `src/lib/airdrop/exportCsv.ts` for the download mechanics and the no-grou
 
 - [ ] **Step 4: Update the docs**
 
-- **`README.md`** — an "Airdrop events" section: what it is for a creator, the two new env vars, `npx supabase start` for local development, `npm run test:rls`, and how to verify a draw.
+- **`README.md`** — an "Airdrop events" section: what it is for a creator, the two new env vars, `./node_modules/.bin/supabase start` for local development, `npm run test:rls`, and how to verify a draw.
 - **`CLAUDE.md`** — Supabase in the stack table, `src/lib/draw/` and `src/public/` in the layout, the two new env vars, that RLS is the only security boundary and has its own suite, and that `@noble/hashes` is used for synchronous SHA-256 because `crypto.subtle` is async and unreliable under jsdom.
 - **`docs/prds/PRD-cookie-bakery.md`** — a changelog entry noting that §1.5 no longer forbids a backend, a database, authentication or mobile-first, pointing at this spec. **Amend rather than rewrite:** the PRD's history is the record of why the project is shaped the way it is.
 
