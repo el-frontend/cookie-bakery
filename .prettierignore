@@ -6,3 +6,4 @@ agent
 pnpm-workspace.yaml
 design
 .vitest
+.superpowers

@@ -32,12 +32,12 @@ La investigación de apps comparables (10 sep 2026) da un resultado claro:
 
 Este spec **deroga** cuatro puntos del PRD §1.5 ("No-objetivos v1"), por decisión explícita del autor:
 
-| PRD §1.5 decía        | Ahora                                                                                  |
-| --------------------- | -------------------------------------------------------------------------------------- |
-| Sin backend/servidor  | **Supabase** (Postgres + Auth + RLS). Sin Edge Functions.                              |
-| Sin base de datos     | **Postgres**, para eventos, registros, sorteos y pagos                                 |
-| Sin autenticación     | **Sign-In-With-Solana** — la wallet del creador _es_ la cuenta                          |
-| Sin mobile-first      | La página de registro (`/e/:slug`) **es** mobile-first. El resto sigue siendo escritorio. |
+| PRD §1.5 decía       | Ahora                                                                                     |
+| -------------------- | ----------------------------------------------------------------------------------------- |
+| Sin backend/servidor | **Supabase** (Postgres + Auth + RLS). Sin Edge Functions.                                 |
+| Sin base de datos    | **Postgres**, para eventos, registros, sorteos y pagos                                    |
+| Sin autenticación    | **Sign-In-With-Solana** — la wallet del creador _es_ la cuenta                            |
+| Sin mobile-first     | La página de registro (`/e/:slug`) **es** mobile-first. El resto sigue siendo escritorio. |
 
 **Lo que NO cambia, y es el núcleo:** RT-03 sigue intacto. **La wallet solo firma; la app envía.** Ninguna clave privada toca el servidor, ninguna transferencia sale de una wallet nuestra.
 
@@ -69,13 +69,13 @@ La lista de registros es un **honeypot**: handle + wallet, por creador, es un da
 
 Hay dos audiencias con necesidades opuestas, y deben ser dos superficies, no una UI con condicionales.
 
-|            | Creador                            | Seguidor                            |
-| ---------- | ---------------------------------- | ----------------------------------- |
-| Ruta       | `/` → sección `events`             | `/e/:slug`                          |
-| Shell      | El de siempre (TopBar, footer, nav) | Ninguno                             |
-| Auth       | SIWS obligatorio                   | Ninguno en el slice; social después |
-| Dispositivo | Escritorio                         | **Móvil**                           |
-| Trabajo    | Crear evento, sortear, pagar       | Dar una dirección y marcharse       |
+|             | Creador                             | Seguidor                            |
+| ----------- | ----------------------------------- | ----------------------------------- |
+| Ruta        | `/` → sección `events`              | `/e/:slug`                          |
+| Shell       | El de siempre (TopBar, footer, nav) | Ninguno                             |
+| Auth        | SIWS obligatorio                    | Ninguno en el slice; social después |
+| Dispositivo | Escritorio                          | **Móvil**                           |
+| Trabajo     | Crear evento, sortear, pagar        | Dar una dirección y marcharse       |
 
 **La página de registro es la única pantalla de todo el proyecto que se abrirá en un teléfono**, con el stream en la otra mano. Si no funciona en móvil, el evento no tiene entradas. Eso la convierte en un requisito no funcional propio, no en un detalle estético.
 
@@ -194,14 +194,14 @@ create table public.payouts (
 
 Es la mitigación del honeypot y la única frontera de seguridad del sistema. RLS activado en todas las tablas, sin excepción.
 
-| Tabla           | `anon`                                          | Seguidor autenticado          | Creador dueño                                        |
-| --------------- | ----------------------------------------------- | ----------------------------- | ---------------------------------------------------- |
-| `events`        | SELECT si `status <> 'draft'`                    | idem                          | ALL                                                  |
-| `entries`       | **INSERT** en evento `open`; **ningún SELECT**   | INSERT; SELECT solo la propia | SELECT/UPDATE/DELETE las de sus eventos              |
-| `draws`         | SELECT (todo, para verificar)                   | idem                          | INSERT si el evento está `closed`; UPDATE solo para revelar. **Sin DELETE.** |
-| `draw_secrets`  | nada                                            | nada                          | SELECT/INSERT las suyas                              |
-| `payouts`       | nada                                            | nada                          | ALL las de sus eventos                               |
-| `profiles`      | SELECT `display_name`                           | idem                          | ALL la propia                                        |
+| Tabla          | `anon`                                         | Seguidor autenticado          | Creador dueño                                                                |
+| -------------- | ---------------------------------------------- | ----------------------------- | ---------------------------------------------------------------------------- |
+| `events`       | SELECT si `status <> 'draft'`                  | idem                          | ALL                                                                          |
+| `entries`      | **INSERT** en evento `open`; **ningún SELECT** | INSERT; SELECT solo la propia | SELECT/UPDATE/DELETE las de sus eventos                                      |
+| `draws`        | SELECT (todo, para verificar)                  | idem                          | INSERT si el evento está `closed`; UPDATE solo para revelar. **Sin DELETE.** |
+| `draw_secrets` | nada                                           | nada                          | SELECT/INSERT las suyas                                                      |
+| `payouts`      | nada                                           | nada                          | ALL las de sus eventos                                                       |
+| `profiles`     | SELECT `display_name`                          | idem                          | ALL la propia                                                                |
 
 Tres consecuencias de diseño que hay que resolver, no ignorar:
 
@@ -441,15 +441,15 @@ Es lo que separa esto de las herramientas existentes, y hay que construirlo. Per
 
 ## 11. Riesgos
 
-| Riesgo                              | Impacto                                          | Mitigación                                                         |
-| ----------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------ |
-| Fase 0 no se cierra a tiempo        | El bounty no puntúa, con o sin esta capa         | Fase 0 va primero, y es lo único que no puede esperar              |
-| SIWS no funciona con Nightly        | Hace falta una Edge Function                     | Spike §8.1 antes de construir nada                                 |
-| El RPC poda historia de bloques     | La verificación a futuro se debilita             | Spike §8.2; la tx memo como respaldo                               |
-| Fuga de la lista de registros       | Desanonimización de la audiencia de un creador   | RLS con tests (§9.2); compromisos en vez de pares (§5.4)           |
-| Un creador re-tira el sorteo        | Sorteo injusto                                   | `draws` append-only y verificador que lista los abandonados        |
-| La app pública crece de peso        | El seguidor móvil no llega a registrarse         | Chunk aparte con presupuesto medido (§8.3)                         |
-| Supabase caído                      | Se degrada la capa de eventos                    | Por diseño: Bake, Airdrop y Oven siguen funcionando                |
+| Riesgo                          | Impacto                                        | Mitigación                                                  |
+| ------------------------------- | ---------------------------------------------- | ----------------------------------------------------------- |
+| Fase 0 no se cierra a tiempo    | El bounty no puntúa, con o sin esta capa       | Fase 0 va primero, y es lo único que no puede esperar       |
+| SIWS no funciona con Nightly    | Hace falta una Edge Function                   | Spike §8.1 antes de construir nada                          |
+| El RPC poda historia de bloques | La verificación a futuro se debilita           | Spike §8.2; la tx memo como respaldo                        |
+| Fuga de la lista de registros   | Desanonimización de la audiencia de un creador | RLS con tests (§9.2); compromisos en vez de pares (§5.4)    |
+| Un creador re-tira el sorteo    | Sorteo injusto                                 | `draws` append-only y verificador que lista los abandonados |
+| La app pública crece de peso    | El seguidor móvil no llega a registrarse       | Chunk aparte con presupuesto medido (§8.3)                  |
+| Supabase caído                  | Se degrada la capa de eventos                  | Por diseño: Bake, Airdrop y Oven siguen funcionando         |
 
 ---
 

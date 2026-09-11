@@ -33,10 +33,12 @@
 This worktree has **no `node_modules`**. Nothing else in the plan can run until it does.
 
 **Files:**
+
 - Modify: `package.json`
 - Modify: `package-lock.json`
 
 **Interfaces:**
+
 - Consumes: nothing
 - Produces: a working `npm test` and `npm run ci`; `@noble/hashes` and `@supabase/supabase-js` importable
 
@@ -112,10 +114,12 @@ git commit -m "chore(deps): add @noble/hashes and supabase-js for creator events
 The spec's §8 gates the architecture. Do this before building anything that depends on it. A spike's deliverable is a written finding, not code you keep.
 
 **Files:**
+
 - Modify: `docs/decisions.md` (append a dated section — this is the repo's existing home for empirically verified findings)
 - Create (throwaway): `src/spike/SiwsProbe.tsx`, deleted in Step 6
 
 **Interfaces:**
+
 - Consumes: nothing
 - Produces: a go/no-go on `signInWithWeb3`, and the known-good history depth of `getBlock`
 
@@ -213,6 +217,7 @@ printf '\nVITE_SUPABASE_URL=https://<ref>.supabase.co\nVITE_SUPABASE_ANON_KEY=<a
 Temporarily render `<SiwsProbe />` instead of `<App />` in `src/main.tsx`, run `npm run dev`, and click the Nightly button.
 
 Three questions to answer, in order:
+
 1. Does `useWallets` hand Supabase an object it accepts, or does it throw on the `wallet` argument? The plugin returns a `UiWallet`; Supabase expects a Wallet Standard wallet. **This is the likely failure point.**
 2. If it throws, does passing the underlying Wallet Standard wallet work instead? Read `node_modules/@solana/kit-plugin-wallet/README.md` for how to reach it from a `UiWallet`.
 3. Does a session come back, and does `data.user.id` stay stable across a sign-out and a second sign-in with the same wallet?
@@ -244,10 +249,12 @@ git commit -m "docs(decisions): SIWS with Nightly and getBlock history on Cookie
 The three definitions the verifier must reproduce exactly (spec §5.3.2). Pure, synchronous, no I/O.
 
 **Files:**
+
 - Create: `src/lib/draw/hashEntry.ts`
 - Test: `src/lib/draw/hashEntry.test.ts`
 
 **Interfaces:**
+
 - Consumes: `@noble/hashes/sha2`, `@noble/hashes/utils`
 - Produces:
   - `hashEntry(eventId: string, walletAddress: string): string` — 64-char lowercase hex
@@ -402,10 +409,12 @@ git commit -m "feat(draw): salted entry commitments and a canonical entries root
 The fairness of the whole feature is this file. A modulo shortcut here produces a biased draw, which is precisely what the design promises to avoid.
 
 **Files:**
+
 - Create: `src/lib/draw/shuffle.ts`
 - Test: `src/lib/draw/shuffle.test.ts`
 
 **Interfaces:**
+
 - Consumes: `@noble/hashes/sha2`, `@noble/hashes/utils`
 - Produces:
   - `finalSeed(seed: Uint8Array, blockhash: string): Uint8Array` — 32 bytes
@@ -424,9 +433,7 @@ const SEED = new Uint8Array(32).fill(7);
 const BLOCKHASH = "4vJ9JU1bJJE96FbKmJqkrqTqmVu9LqvXK8T1FNmMkAnG";
 
 function hashes(n: number): string[] {
-  return Array.from({ length: n }, (_, i) =>
-    i.toString(16).padStart(64, "0")
-  );
+  return Array.from({ length: n }, (_, i) => i.toString(16).padStart(64, "0"));
 }
 
 describe("finalSeed", () => {
@@ -443,9 +450,7 @@ describe("finalSeed", () => {
   it("cambia si cambia un solo bit de la semilla", () => {
     const other = new Uint8Array(SEED);
     other[31] ^= 0x01;
-    expect(finalSeed(SEED, BLOCKHASH)).not.toEqual(
-      finalSeed(other, BLOCKHASH)
-    );
+    expect(finalSeed(SEED, BLOCKHASH)).not.toEqual(finalSeed(other, BLOCKHASH));
   });
 });
 
@@ -610,7 +615,11 @@ export class DrawRandom {
     if (this.#offset + WORD_SIZE > this.#block.length) {
       const input = new Uint8Array(this.#seed.length + WORD_SIZE);
       input.set(this.#seed, 0);
-      new DataView(input.buffer).setUint32(this.#seed.length, this.#counter, false);
+      new DataView(input.buffer).setUint32(
+        this.#seed.length,
+        this.#counter,
+        false
+      );
       this.#block = sha256(input);
       this.#offset = 0;
       this.#counter += 1;
@@ -690,10 +699,12 @@ git commit -m "feat(draw): deterministic shuffle with unbiased rejection samplin
 A reimplementation, not a call into `pickWinners`. A verifier that shares its implementation with the thing it verifies proves nothing.
 
 **Files:**
+
 - Create: `src/lib/draw/verifyDraw.ts`
 - Test: `src/lib/draw/verifyDraw.test.ts`
 
 **Interfaces:**
+
 - Consumes: `hashEntry.ts` (`canonicalOrder`, `entriesRoot`), `@noble/hashes`
 - Produces:
   - `type PublishedDraw = { commit: string; revealedSeed: string; targetSlot: number; commitSlot: number; blockhash: string; entryHashes: readonly string[]; entriesRoot: string; winners: readonly string[]; winnersCount: number }`
@@ -865,7 +876,8 @@ export type VerifyFailure =
   | "winners-count-mismatch"
   | "winners-mismatch";
 
-export type VerifyResult = { ok: true } | { failures: VerifyFailure[]; ok: false };
+export type VerifyResult =
+  { ok: true } | { failures: VerifyFailure[]; ok: false };
 
 const TWO_POW_32 = 0x1_0000_0000;
 
@@ -877,9 +889,11 @@ function* words(seed: Uint8Array): Generator<number> {
     new DataView(input.buffer).setUint32(seed.length, counter, false);
     const block = sha256(input);
     for (let o = 0; o + 4 <= block.length; o += 4) {
-      yield (
-        ((block[o] << 24) | (block[o + 1] << 16) | (block[o + 2] << 8) | block[o + 3]) >>> 0
-      );
+      yield ((block[o] << 24) |
+        (block[o + 1] << 16) |
+        (block[o + 2] << 8) |
+        block[o + 3]) >>>
+        0;
     }
   }
 }
@@ -971,10 +985,12 @@ git commit -m "feat(draw): independent verifier for a published draw"
 The join between the new feature and everything already built. `Recipient` is the exact type `buildAirdropInstructions` consumes, so producing it correctly means the whole send path is reused untouched.
 
 **Files:**
+
 - Create: `src/lib/draw/toRecipients.ts`
 - Test: `src/lib/draw/toRecipients.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Recipient` from `src/lib/airdrop/buildPlan.ts` (`{ address: Address; amount: bigint }`), `isAddress` from `@solana/kit`
 - Produces:
   - `type DrawnEntry = { entryId: string; hash: string; walletAddress: string }`
@@ -1058,7 +1074,11 @@ describe("toRecipients", () => {
     // validación. Si divergen, una regla añadida al CSV no protegería al
     // evento.
     const all = entries();
-    const recipients = toRecipients([all[0].hash, all[1].hash], all, 2_000_000n);
+    const recipients = toRecipients(
+      [all[0].hash, all[1].hash],
+      all,
+      2_000_000n
+    );
 
     const csv = recipients
       .map((r) => `${r.address},${r.amount.toString()}`)
@@ -1257,6 +1277,7 @@ git commit -m "feat(draw): adapt winners and manual selections into airdrop reci
 RLS is the only security boundary in the system and the thing protecting a creator's audience list. Untested RLS is broken RLS.
 
 **Files:**
+
 - Create: `supabase/config.toml` (via `supabase init`)
 - Create: `supabase/migrations/<timestamp>_creator_events.sql`
 - Create: `src/lib/supabase/rls.test.ts`
@@ -1265,6 +1286,7 @@ RLS is the only security boundary in the system and the thing protecting a creat
 - Modify: `package.json` (a `test:rls` script)
 
 **Interfaces:**
+
 - Consumes: Task 0's `@supabase/supabase-js`
 - Produces: the six tables of spec §4.1 with policies; local Postgres for the RLS suite
 
@@ -1401,12 +1423,18 @@ describe("RLS · entries", () => {
 
 describe("RLS · events", () => {
   when()("anon ve los eventos no-draft", async () => {
-    const { data } = await anon.from("events").select("slug").eq("id", eventOpen);
+    const { data } = await anon
+      .from("events")
+      .select("slug")
+      .eq("id", eventOpen);
     expect(data).toHaveLength(1);
   });
 
   when()("anon NO ve los eventos draft", async () => {
-    const { data } = await anon.from("events").select("slug").eq("id", eventDraft);
+    const { data } = await anon
+      .from("events")
+      .select("slug")
+      .eq("id", eventDraft);
     expect(data).toEqual([]);
   });
 
@@ -1695,6 +1723,7 @@ git commit -m "feat(events): schema and row level security, tested against Postg
 ### Task 7: Typed Supabase client and queries
 
 **Files:**
+
 - Create: `src/lib/supabase/client.ts`
 - Create: `src/lib/supabase/types.ts` (generated)
 - Create: `src/lib/supabase/events.ts`
@@ -1703,6 +1732,7 @@ git commit -m "feat(events): schema and row level security, tested against Postg
 - Test: `src/lib/chain/config.test.ts` (extend)
 
 **Interfaces:**
+
 - Consumes: Task 6's schema
 - Produces:
   - `supabase` — the single `SupabaseClient<Database>` instance
@@ -1733,7 +1763,9 @@ describe("parseBaseUnits", () => {
   it("convierte el string de numeric a bigint sin pasar por Number", () => {
     // supabase-js devuelve numeric(39,0) como string. Con Number, cualquier
     // supply grande a 9 decimales pierde precisión pasados los 2^53.
-    expect(parseBaseUnits("1000000000000000000")).toBe(1_000_000_000_000_000_000n);
+    expect(parseBaseUnits("1000000000000000000")).toBe(
+      1_000_000_000_000_000_000n
+    );
   });
 
   it("sobrevive a un valor por encima de 2^53", () => {
@@ -1756,9 +1788,9 @@ describe("registrationOutcome", () => {
   it("traduce la violación de unicidad a 'already-registered'", () => {
     // Sin política de SELECT para anon no podemos consultar antes de insertar,
     // así que el error de la restricción ES la comprobación.
-    expect(registrationOutcome({ code: "23505", message: "duplicate key" })).toBe(
-      "already-registered"
-    );
+    expect(
+      registrationOutcome({ code: "23505", message: "duplicate key" })
+    ).toBe("already-registered");
   });
 
   it("deja pasar el resto de errores", () => {
@@ -1870,7 +1902,11 @@ export async function createEvent(input: {
   return data;
 }
 
-async function setStatus(id: string, status: EventRow["status"], stamp: string) {
+async function setStatus(
+  id: string,
+  status: EventRow["status"],
+  stamp: string
+) {
   const { error } = await supabase
     .from("events")
     .update({ [stamp]: new Date().toISOString(), status })
@@ -1890,10 +1926,14 @@ export async function listMyEvents(): Promise<EventRow[]> {
   return data;
 }
 
-export async function getPublicEvent(slug: string): Promise<PublicEvent | null> {
+export async function getPublicEvent(
+  slug: string
+): Promise<PublicEvent | null> {
   const { data, error } = await supabase
     .from("events")
-    .select("entry_count, mint, mint_decimals, mint_symbol, slug, status, title")
+    .select(
+      "entry_count, mint, mint_decimals, mint_symbol, slug, status, title"
+    )
     .eq("slug", slug)
     .maybeSingle();
   if (error) throw new Error(error.message);
@@ -1979,11 +2019,13 @@ git commit -m "feat(events): typed Supabase client and event queries"
 Implement whatever Task 1 proved works. If Task 1's gate failed, **stop here** — do not invent a workaround.
 
 **Files:**
+
 - Create: `src/hooks/useCreatorSession.ts`
 - Create: `src/components/CreatorSignIn.tsx`
 - Test: `src/hooks/useCreatorSession.test.ts`
 
 **Interfaces:**
+
 - Consumes: `supabase` from Task 7, `useWallets`/`useConnectedWallet` from `@solana/kit-plugin-wallet/react`
 - Produces:
   - `useCreatorSession(): { session: Session | null; status: "loading" | "signed-in" | "signed-out"; signIn: () => Promise<void>; signOut: () => Promise<void> }`
@@ -2102,12 +2144,14 @@ git commit -m "feat(events): sign creators in with their wallet via SIWS"
 ### Task 9: Route split and the lazy public surface
 
 **Files:**
+
 - Modify: `src/main.tsx`
 - Create: `src/public/PublicApp.tsx`
 - Create: `src/public/route.ts`
 - Test: `src/public/route.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing
 - Produces:
   - `parsePublicRoute(pathname: string): { kind: "register"; slug: string } | { kind: "verify"; slug: string } | null`
@@ -2186,8 +2230,7 @@ Expected: FAIL — `Failed to resolve import "./route"`.
  */
 
 export type PublicRoute =
-  | { kind: "register"; slug: string }
-  | { kind: "verify"; slug: string };
+  { kind: "register"; slug: string } | { kind: "verify"; slug: string };
 
 const SLUG = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
@@ -2199,7 +2242,8 @@ export function parsePublicRoute(pathname: string): PublicRoute | null {
   if (slug === undefined || !SLUG.test(slug)) return null;
 
   if (parts.length === 2) return { kind: "register", slug };
-  if (parts.length === 3 && parts[2] === "verify") return { kind: "verify", slug };
+  if (parts.length === 3 && parts[2] === "verify")
+    return { kind: "verify", slug };
   return null;
 }
 ```
@@ -2266,10 +2310,12 @@ git commit -m "feat(events): split the public follower surface into its own chun
 The only screen in the project that gets opened on a phone. Mobile-first is a requirement here, not a nicety.
 
 **Files:**
+
 - Create: `src/public/Register.tsx`
 - Test: `src/public/Register.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `getPublicEvent`, `registerEntry` (Task 7); `parsePublicRoute` (Task 9)
 - Produces: `<Register slug={string} />`
 
@@ -2359,9 +2405,7 @@ describe("Register", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: /count me in/i }));
 
-    expect(
-      await screen.findByText(/already registered/i)
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/already registered/i)).toBeInTheDocument();
   });
 
   it("recuerda el registro tras recargar", async () => {
@@ -2448,6 +2492,7 @@ git commit -m "feat(events): mobile-first public registration page"
 ### Task 11: The creator's Events panel
 
 **Files:**
+
 - Create: `src/app/Events.tsx`
 - Create: `src/components/EventCard.tsx`
 - Create: `src/components/EventForm.tsx`
@@ -2457,6 +2502,7 @@ git commit -m "feat(events): mobile-first public registration page"
 - Modify: `src/App.tsx` (render the new section)
 
 **Interfaces:**
+
 - Consumes: Tasks 7, 8; `TokenSelector` and `SelectedToken` from `src/components/TokenSelector.tsx`
 - Produces:
   - `slugify(title: string): string`
@@ -2521,10 +2567,7 @@ Expected: FAIL — `Failed to resolve import "./slug"`.
  * exactly that, on purpose.
  */
 export function slugify(title: string): string {
-  const ascii = title
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
+  const ascii = title.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
   const kebab = ascii
     .replace(/[^a-z0-9]+/g, "-")
@@ -2628,11 +2671,13 @@ git commit -m "feat(events): creator panel to create, open and close events"
 ### Task 12: The draw — commit, wait, reveal
 
 **Files:**
+
 - Create: `src/lib/draw/runDraw.ts`
 - Create: `src/components/DrawPanel.tsx`
 - Test: `src/lib/draw/runDraw.test.ts`
 
 **Interfaces:**
+
 - Consumes: Tasks 2–4, 7; `client.getSlot`/`getBlock` through the Kit client
 - Produces:
   - `commitDraw(input: { eventId: string; entries: readonly DrawnEntry[]; winnersCount: number; amountPerWinner: bigint; currentSlot: bigint }): Promise<{ drawId: string; commit: string; targetSlot: bigint; entriesRoot: string; orderedHashes: string[] }>`
@@ -2799,7 +2844,7 @@ export async function revealDraw(input: {
 Three states, and the waiting one is the whole experience:
 
 1. **Setup** — amount per winner and how many. Disabled unless the event is `closed` and has entries. Show what the total will cost against the creator's balance, reusing `useBakeCost`'s pattern.
-2. **Waiting** — *"the draw uses the hash of block N, which Cookie Chain has not produced yet"*, with the live slot counting up. Poll `getSlot` with SWR. Reuse `useElapsed` for the timer and honour `usePrefersReducedMotion`.
+2. **Waiting** — _"the draw uses the hash of block N, which Cookie Chain has not produced yet"_, with the live slot counting up. Poll `getSlot` with SWR. Reuse `useElapsed` for the timer and honour `usePrefersReducedMotion`.
 3. **Revealed** — the winners, the seed, the blockhash, and a link to `/e/:slug/verify`.
 
 Wrap every imperative step in `useAction` from `@solana/react`, per CLAUDE.md — `dispatch` does not throw, so no unhandled rejections in `onClick`.
@@ -2823,11 +2868,13 @@ git commit -m "feat(draw): commit, wait for the target slot, then reveal"
 The commit memo is what makes the timing verifiable without trusting any database timestamp. It is load-bearing, not decorative.
 
 **Files:**
+
 - Create: `src/lib/draw/attest.ts`
 - Test: `src/lib/draw/attest.test.ts`
 - Modify: `package.json` (add `@solana-program/memo`)
 
 **Interfaces:**
+
 - Consumes: `@solana-program/memo`, the Kit client
 - Produces:
   - `commitMemo(input: { drawId: string; commit: string; targetSlot: bigint; entriesRoot: string }): string`
@@ -2845,12 +2892,14 @@ const DRAW = "11111111-2222-3333-4444-555555555555";
 
 describe("commitMemo", () => {
   it("lleva versión, para poder cambiar el formato sin romper verificadores viejos", () => {
-    expect(commitMemo({
-      commit: "aa".repeat(32),
-      drawId: DRAW,
-      entriesRoot: "bb".repeat(32),
-      targetSlot: 1_150n,
-    })).toMatch(/^cookie-bakery:draw-commit:v1:/);
+    expect(
+      commitMemo({
+        commit: "aa".repeat(32),
+        drawId: DRAW,
+        entriesRoot: "bb".repeat(32),
+        targetSlot: 1_150n,
+      })
+    ).toMatch(/^cookie-bakery:draw-commit:v1:/);
   });
 
   it("incluye el slot objetivo, que es la mitad de la prueba temporal", () => {
@@ -2940,12 +2989,14 @@ git commit -m "feat(draw): attest commit and reveal on chain with memo transacti
 No new send logic. If this task writes a transaction-building loop, it is wrong.
 
 **Files:**
+
 - Modify: `src/App.tsx` (extend the cross-screen handoff to carry recipients)
 - Modify: `src/app/Airdrop.tsx` (accept a preloaded recipient list)
 - Create: `src/components/EventPayout.tsx`
 - Test: `src/app/Airdrop.test.tsx` (extend)
 
 **Interfaces:**
+
 - Consumes: `toRecipients`, `selectionToRecipients`, `splitPool` (Task 5); the existing `probeAtas` → `buildAirdropInstructions` → `executor` chain
 - Produces: `<EventPayout />`, and `Airdrop`'s new `preloaded?: { token: SelectedToken; recipients: Recipient[] }` prop
 
@@ -3057,10 +3108,12 @@ git commit -m "feat(events): pay winners through the existing airdrop engine"
 What turns "verifiable" from a claim into something anyone can check.
 
 **Files:**
+
 - Create: `src/public/Verify.tsx`
 - Test: `src/public/Verify.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `verifyDraw` (Task 4), `draws` public read (Task 6)
 - Produces: `<Verify slug={string} />`
 
@@ -3115,7 +3168,13 @@ describe("Verify", () => {
 
   it("explica que un sorteo aún sin revelar no se puede verificar todavía", async () => {
     listPublicDraws.mockResolvedValue([
-      { ...REVEALED, blockhash: null, revealedSeed: null, status: "committed", winners: null },
+      {
+        ...REVEALED,
+        blockhash: null,
+        revealedSeed: null,
+        status: "committed",
+        winners: null,
+      },
     ]);
     render(<Verify slug="summer-jam" />);
     expect(await screen.findByText(/not revealed yet/i)).toBeInTheDocument();
@@ -3127,9 +3186,7 @@ describe("Verify", () => {
     listPublicDraws.mockResolvedValue([REVEALED]);
     render(<Verify slug="summer-jam" />);
     await screen.findByText(/does not check out/i);
-    expect(document.body.textContent).not.toMatch(
-      /Tokenz|Tokenkeg|ATokenGP/
-    );
+    expect(document.body.textContent).not.toMatch(/Tokenz|Tokenkeg|ATokenGP/);
   });
 
   it("no hay sorteos todavía", async () => {
@@ -3168,12 +3225,14 @@ git commit -m "feat(events): public page to verify any published draw"
 ### Task 16: Export, docs, and the PRD amendment
 
 **Files:**
+
 - Create: `src/lib/supabase/exportEvent.ts`
 - Test: `src/lib/supabase/exportEvent.test.ts`
 - Modify: `README.md`, `CLAUDE.md`, `.env.example`
 - Modify: `docs/prds/PRD-cookie-bakery.md`
 
 **Interfaces:**
+
 - Consumes: Tasks 7, 12
 - Produces: `exportEvent(eventId: string): Promise<{ csv: string; json: string }>`
 
@@ -3196,12 +3255,19 @@ const BUNDLE = {
     },
   ],
   entries: [
-    { createdAt: "2026-09-10T00:00:00Z", id: "e1", walletAddress: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" },
+    {
+      createdAt: "2026-09-10T00:00:00Z",
+      id: "e1",
+      walletAddress: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    },
   ],
-  event: { mint: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb", mintDecimals: 6, slug: "summer-jam", title: "Summer Jam" },
-  payouts: [
-    { amount: "1000000", entryId: "e1", signature: "sig-1" },
-  ],
+  event: {
+    mint: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    mintDecimals: 6,
+    slug: "summer-jam",
+    title: "Summer Jam",
+  },
+  payouts: [{ amount: "1000000", entryId: "e1", signature: "sig-1" }],
 };
 
 describe("toExportCsv", () => {
