@@ -158,6 +158,7 @@ create table public.draws (
   winner_entry_ids  uuid[],
   status            draw_status not null default 'committed',
   commit_signature  text,                   -- tx memo del commit
+  commit_slot       bigint,                 -- slot en que aterrizó esa tx
   reveal_signature  text,                   -- tx memo del reveal
   created_at        timestamptz not null default now()
 );

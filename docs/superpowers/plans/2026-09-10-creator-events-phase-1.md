@@ -1515,6 +1515,8 @@ npx supabase migration new creator_events
 
 Fill the generated file with the schema from spec §4.1 plus these policies. Copy the table definitions verbatim from the spec — it is the source of truth for columns and types — then append:
 
+**Before writing a line of this SQL, load the skills `supabase:supabase` and `supabase:supabase-postgres-best-practices`.** The policy shapes below already follow their security checklist, and the four notes marked **WHY** exist because the obvious version of each is silently broken. Do not "simplify" them back.
+
 ```sql
 -- Every table is locked by default; each policy below opens exactly one door.
 alter table public.profiles     enable row level security;
@@ -1524,19 +1526,44 @@ alter table public.draws        enable row level security;
 alter table public.draw_secrets enable row level security;
 alter table public.payouts      enable row level security;
 
+-- Data API grants ------------------------------------------------------
+-- WHY (1): RLS decides which ROWS are visible; it does not make a table
+-- reachable through the Data API at all. Without these grants PostgREST
+-- answers "permission denied" no matter how correct the policies are, and
+-- the RLS suite in step 2 fails for a reason that looks like RLS but is not.
+grant select                         on public.events       to anon, authenticated;
+grant insert, update, delete         on public.events       to authenticated;
+grant insert                         on public.entries      to anon, authenticated;
+grant select, delete                 on public.entries      to authenticated;
+grant select                         on public.draws        to anon, authenticated;
+grant insert, update                 on public.draws        to authenticated;
+grant select, insert                 on public.draw_secrets to authenticated;
+grant select, insert, update, delete on public.payouts      to authenticated;
+grant select                         on public.profiles     to anon, authenticated;
+grant insert, update, delete         on public.profiles     to authenticated;
+
 -- events ---------------------------------------------------------------
+-- WHY (2): every policy names its role with TO. A policy without one applies
+-- to PUBLIC, and `auth.role() = 'authenticated'` — the old way of narrowing
+-- it — is deprecated AND breaks silently once anonymous sign-ins exist,
+-- because an anonymous user also carries the `authenticated` Postgres role.
+-- `(select auth.uid())` rather than bare `auth.uid()` so Postgres evaluates
+-- it once per statement instead of once per row.
 create policy events_public_read on public.events
-  for select using (status <> 'draft');
+  for select to anon, authenticated using (status <> 'draft');
 
 create policy events_owner_all on public.events
-  for all using (creator_id = auth.uid()) with check (creator_id = auth.uid());
+  for all to authenticated
+  using (creator_id = (select auth.uid()))
+  with check (creator_id = (select auth.uid()));
 
 -- entries --------------------------------------------------------------
--- The public page inserts with Prefer: return=minimal, so no SELECT policy
--- is needed for anon and none is granted. Enumerating a creator's audience
--- is the one thing this schema must make impossible.
+-- The public page inserts without asking for the row back, so no SELECT
+-- policy is needed for anon and none is granted. Enumerating a creator's
+-- audience is the one thing this schema must make impossible.
 create policy entries_public_insert on public.entries
-  for insert with check (
+  for insert to anon, authenticated
+  with check (
     exists (
       select 1 from public.events e
       where e.id = event_id and e.status = 'open'
@@ -1544,21 +1571,24 @@ create policy entries_public_insert on public.entries
   );
 
 create policy entries_own_read on public.entries
-  for select using (user_id is not null and user_id = auth.uid());
+  for select to authenticated
+  using (user_id is not null and user_id = (select auth.uid()));
 
 create policy entries_creator_read on public.entries
-  for select using (
+  for select to authenticated
+  using (
     exists (
       select 1 from public.events e
-      where e.id = event_id and e.creator_id = auth.uid()
+      where e.id = event_id and e.creator_id = (select auth.uid())
     )
   );
 
-create policy entries_creator_write on public.entries
-  for delete using (
+create policy entries_creator_delete on public.entries
+  for delete to authenticated
+  using (
     exists (
       select 1 from public.events e
-      where e.id = event_id and e.creator_id = auth.uid()
+      where e.id = event_id and e.creator_id = (select auth.uid())
     )
   );
 
@@ -1566,14 +1596,15 @@ create policy entries_creator_write on public.entries
 -- Public read: verification is the whole point. No DELETE policy exists, so
 -- an abandoned draw stays visible and re-rolling cannot be hidden.
 create policy draws_public_read on public.draws
-  for select using (true);
+  for select to anon, authenticated using (true);
 
 create policy draws_owner_insert on public.draws
-  for insert with check (
+  for insert to authenticated
+  with check (
     exists (
       select 1 from public.events e
       where e.id = event_id
-        and e.creator_id = auth.uid()
+        and e.creator_id = (select auth.uid())
         and e.status = 'closed'
     )
   );
@@ -1581,11 +1612,25 @@ create policy draws_owner_insert on public.draws
 -- Only the reveal fields may be filled in. If the commit, the target slot or
 -- the frozen list could be rewritten afterwards, the entire verification
 -- collapses.
+--
+-- WHY (3): an UPDATE policy needs BOTH `using` and `with check`. With only
+-- `using`, a creator can rewrite a draw's `event_id` to point at somebody
+-- else's event — the row passes the read test on the way in and nothing
+-- tests it on the way out. (`draws_public_read` also has to exist for these
+-- updates to work at all: an UPDATE must SELECT the row first, and without a
+-- readable row it returns 0 rows changed with no error.)
 create policy draws_owner_reveal on public.draws
-  for update using (
+  for update to authenticated
+  using (
     exists (
       select 1 from public.events e
-      where e.id = event_id and e.creator_id = auth.uid()
+      where e.id = event_id and e.creator_id = (select auth.uid())
+    )
+  )
+  with check (
+    exists (
+      select 1 from public.events e
+      where e.id = event_id and e.creator_id = (select auth.uid())
     )
   );
 
@@ -1610,47 +1655,60 @@ create trigger draws_commitments_immutable
 
 -- draw_secrets ---------------------------------------------------------
 create policy draw_secrets_owner on public.draw_secrets
-  for all using (
+  for all to authenticated
+  using (
     exists (
       select 1 from public.draws d
       join public.events e on e.id = d.event_id
-      where d.id = draw_id and e.creator_id = auth.uid()
+      where d.id = draw_id and e.creator_id = (select auth.uid())
     )
   ) with check (
     exists (
       select 1 from public.draws d
       join public.events e on e.id = d.event_id
-      where d.id = draw_id and e.creator_id = auth.uid()
+      where d.id = draw_id and e.creator_id = (select auth.uid())
     )
   );
 
 -- payouts --------------------------------------------------------------
 create policy payouts_owner on public.payouts
-  for all using (
+  for all to authenticated
+  using (
     exists (
       select 1 from public.events e
-      where e.id = event_id and e.creator_id = auth.uid()
+      where e.id = event_id and e.creator_id = (select auth.uid())
     )
   ) with check (
     exists (
       select 1 from public.events e
-      where e.id = event_id and e.creator_id = auth.uid()
+      where e.id = event_id and e.creator_id = (select auth.uid())
     )
   );
 
 -- profiles -------------------------------------------------------------
 create policy profiles_public_read on public.profiles
-  for select using (true);
+  for select to anon, authenticated using (true);
 
 create policy profiles_owner_write on public.profiles
-  for all using (id = auth.uid()) with check (id = auth.uid());
+  for all to authenticated
+  using (id = (select auth.uid()))
+  with check (id = (select auth.uid()));
 
 -- entry_count ----------------------------------------------------------
 -- anon cannot SELECT entries, so it cannot COUNT them either. The public
 -- "312 registered" number has to be maintained here instead.
+--
+-- WHY (4): SECURITY DEFINER is REQUIRED here — anon has no UPDATE grant or
+-- policy on `events`, so an invoker-rights trigger could not maintain the
+-- counter. It is also the reason for the revoke below: Postgres grants
+-- EXECUTE to PUBLIC on every new function, which would make a definer-rights
+-- function in an exposed schema a public endpoint. This one returns `trigger`
+-- so it cannot be called directly anyway, but belt and braces. The counter
+-- test in step 2 ("entry_count lo mantiene el trigger") fires through anon,
+-- so it is what proves the revoke did not stop the trigger.
 create or replace function public.bump_entry_count()
 returns trigger language plpgsql security definer
-set search_path = public as $$
+set search_path = '' as $$
 begin
   update public.events
      set entry_count = entry_count + 1
@@ -1658,13 +1716,18 @@ begin
   return new;
 end $$;
 
+revoke execute on function public.bump_entry_count() from public;
+
 create trigger entries_bump_count
   after insert on public.entries
   for each row execute function public.bump_entry_count();
 
 -- Helper the RLS suite calls to assert the closed-event precondition.
+-- SECURITY INVOKER (the default) on purpose: it must see only what its caller
+-- can see. Execute is revoked from PUBLIC and granted narrowly.
 create or replace function public.assert_draw_event_closed(p_event_id uuid)
-returns void language plpgsql as $$
+returns void language plpgsql
+set search_path = '' as $$
 begin
   if not exists (
     select 1 from public.events where id = p_event_id and status = 'closed'
@@ -1672,7 +1735,20 @@ begin
     raise exception 'A draw needs the event to be closed.';
   end if;
 end $$;
+
+revoke execute on function public.assert_draw_event_closed(uuid) from public;
+grant  execute on function public.assert_draw_event_closed(uuid) to authenticated;
 ```
+
+Note on `set search_path = ''`: with an empty search path every reference has to be schema-qualified, which is why the bodies above say `public.events`. It is the hardening the Supabase advisors ask for — an unqualified name in a definer-rights function can be hijacked by a caller-controlled search path.
+
+- [ ] **Step 4b: Run the advisors before moving on**
+
+```bash
+npx supabase db advisors
+```
+
+Fix anything it reports. This is the check that catches an exposed table with RLS off, or a definer-rights function left callable — exactly the class of mistake the notes above are guarding against, and it is cheap to run.
 
 - [ ] **Step 5: Apply the migration and add the env plumbing**
 
