@@ -254,6 +254,8 @@ Ambos números son públicos y comprobables en CookieScan. Por eso la tx memo de
 
 El verificador tiene que dar el mismo resultado bit a bit, así que aquí no cabe ambigüedad:
 
+- **`semilla`** = 32 bytes crudos de `crypto.getRandomValues`. Se guarda y publica en **hex minúsculas**; `commit = SHA256(bytes_crudos)`, también hex.
+- **`final`** = `SHA256(semilla_bytes || utf8(blockhash_base58))`. El blockhash entra como **su string base58**, el mismo que se lee en CookieScan, no como sus 32 bytes decodificados. Así alguien puede verificar a mano con lo que ve en el explorador.
 - **`hashEntry`** = `SHA256(utf8(event_id) || 0x00 || utf8(wallet_address))`, en hex minúsculas. El byte separador impide colisiones por concatenación.
 - **Orden canónico** = los hashes hex ordenados **lexicográficamente ascendente**. Nunca el orden de inserción, o el servidor podría reordenar para mover el resultado.
 - **`entries_root`** = `SHA256(utf8(h_0 || "\n" || h_1 || "\n" || … || h_n-1))` sobre la lista ya ordenada, sin salto final.
