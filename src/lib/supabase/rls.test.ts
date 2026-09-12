@@ -43,10 +43,16 @@ const MINT = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
 let up = false;
 let anon!: SupabaseClient;
 let admin!: SupabaseClient;
+// Real authenticated JWTs (not `anon`, not `admin`) for the two creators used
+// by the cross-tenant and commitment-immutability cases below.
+let creatorA!: SupabaseClient;
+let creatorB!: SupabaseClient;
 let eventOpen!: string;
 let eventDraft!: string;
 let eventClosed!: string;
+let eventPaid!: string;
 let creatorId = "";
+let creatorBId = "";
 
 if (URL && ANON_KEY && SECRET_KEY) {
   try {
@@ -71,10 +77,12 @@ if (up) {
   anon = createClient(URL, ANON_KEY, clientOptions);
   admin = createClient(URL, SECRET_KEY, clientOptions);
 
+  const creatorAEmail = `rls-test-${RUN}@example.test`;
+  const creatorAPassword = "correct-horse-battery-staple";
   const { data: user, error: userError } = await admin.auth.admin.createUser({
-    email: `rls-test-${RUN}@example.test`,
+    email: creatorAEmail,
     email_confirm: true,
-    password: "correct-horse-battery-staple",
+    password: creatorAPassword,
   });
   if (userError || !user.user) {
     throw new Error(
@@ -107,6 +115,51 @@ if (up) {
   eventOpen = await seed("open", `rls-test-${RUN}-open`);
   eventDraft = await seed("draft", `rls-test-${RUN}-draft`);
   eventClosed = await seed("closed", `rls-test-${RUN}-closed`);
+  eventPaid = await seed("paid", `rls-test-${RUN}-paid`);
+
+  // Second creator, needed only to prove cross-tenant isolation below: an
+  // authenticated non-owner must see none of creator A's private rows. This
+  // is a materially different claim from "anon can't see it" — a broad
+  // default GRANT plus a missing policy could still block anon while a
+  // buggy owner-scoped policy leaks rows to any other logged-in user.
+  const creatorBEmail = `rls-test-${RUN}-b@example.test`;
+  const creatorBPassword = "correct-horse-battery-staple-b";
+  const { data: userB, error: userBError } = await admin.auth.admin.createUser({
+    email: creatorBEmail,
+    email_confirm: true,
+    password: creatorBPassword,
+  });
+  if (userBError || !userB.user) {
+    throw new Error(
+      `fixture setup: could not create second test creator — ${userBError?.message}`
+    );
+  }
+  creatorBId = userB.user.id;
+
+  // `createClient` + `signInWithPassword`, not `admin`: these two clients
+  // must carry a real `authenticated` JWT for their own user, which is what
+  // makes `auth.uid()` resolve inside the policies under test.
+  creatorA = createClient(URL, ANON_KEY, clientOptions);
+  const signInA = await creatorA.auth.signInWithPassword({
+    email: creatorAEmail,
+    password: creatorAPassword,
+  });
+  if (signInA.error) {
+    throw new Error(
+      `fixture setup: creator A sign-in failed — ${signInA.error.message}`
+    );
+  }
+
+  creatorB = createClient(URL, ANON_KEY, clientOptions);
+  const signInB = await creatorB.auth.signInWithPassword({
+    email: creatorBEmail,
+    password: creatorBPassword,
+  });
+  if (signInB.error) {
+    throw new Error(
+      `fixture setup: creator B sign-in failed — ${signInB.error.message}`
+    );
+  }
 }
 
 afterAll(async () => {
@@ -120,6 +173,17 @@ afterAll(async () => {
     throw new Error(
       `cleanup: could not delete test creator — ${error.message}`
     );
+  }
+
+  // Creator B owns no events (it exists only to prove isolation as a reader),
+  // so there is nothing to cascade-check for it beyond deleting the user.
+  if (creatorBId) {
+    const { error: errorB } = await admin.auth.admin.deleteUser(creatorBId);
+    if (errorB) {
+      throw new Error(
+        `cleanup: could not delete second test creator — ${errorB.message}`
+      );
+    }
   }
 
   // Prove the cascade actually happened rather than trusting it silently —
@@ -201,6 +265,17 @@ describe("RLS · entries", () => {
   when()("anon no puede registrarse en un evento cerrado", async () => {
     const { error } = await anon.from("entries").insert({
       event_id: eventClosed,
+      wallet_address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+    });
+    expect(error).not.toBeNull();
+  });
+
+  when()("anon no puede registrarse en un evento paid", async () => {
+    // `entries_public_insert` only allows `status = 'open'`; draft and
+    // closed are covered above, but `paid` is a distinct enum value and the
+    // spec calls out all three non-open states explicitly.
+    const { error } = await anon.from("entries").insert({
+      event_id: eventPaid,
       wallet_address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
     });
     expect(error).not.toBeNull();
@@ -298,5 +373,193 @@ describe("RLS · draws", () => {
       p_event_id: eventOpen,
     });
     expect(error).not.toBeNull();
+  });
+
+  when()(
+    "el trigger congela seed_commit, target_slot y entry_hashes de un draw ya escrito",
+    async () => {
+      // The whole verifiability claim of the product rests on this: if the
+      // owning creator could rewrite the commitment after seeing the
+      // entropy, the commit-reveal proof is worthless. `draws_owner_reveal`
+      // alone would let this UPDATE through — it is the
+      // `freeze_draw_commitments` trigger, not RLS, that has to reject it.
+      const originalSeedCommit = "dd".repeat(32);
+      const seeded = await admin
+        .from("draws")
+        .insert({
+          entries_root: "ee".repeat(32),
+          entry_hashes: ["ee".repeat(32)],
+          event_id: eventClosed,
+          amount_per_winner: "1000",
+          seed_commit: originalSeedCommit,
+          target_slot: 2200,
+          winners_count: 1,
+        })
+        .select("id")
+        .single();
+      expect(
+        seeded.error,
+        `no se pudo sembrar la fixture: ${seeded.error?.message}`
+      ).toBeNull();
+      const drawId = seeded.data!.id as string;
+
+      const { error } = await creatorA
+        .from("draws")
+        .update({
+          seed_commit: "ff".repeat(32),
+          target_slot: 9999,
+          entry_hashes: ["ff".repeat(32)],
+        })
+        .eq("id", drawId);
+      expect(error).not.toBeNull();
+
+      // Confirm the rejected write did not partially land, via admin so the
+      // check does not depend on the same (possibly broken) policy.
+      const after = await admin
+        .from("draws")
+        .select("seed_commit")
+        .eq("id", drawId)
+        .single();
+      expect(after.data?.seed_commit).toBe(originalSeedCommit);
+    }
+  );
+
+  when()(
+    "el creador dueño sí puede completar los campos de revelación de su draw",
+    async () => {
+      // The other half of the same claim: proving the trigger blocks
+      // rewrites is worthless if it also blocks the legitimate reveal —
+      // that would just mean the feature is broken, not that it is safe.
+      const seeded = await admin
+        .from("draws")
+        .insert({
+          entries_root: "11".repeat(32),
+          entry_hashes: ["11".repeat(32)],
+          event_id: eventClosed,
+          amount_per_winner: "1000",
+          seed_commit: "22".repeat(32),
+          target_slot: 3300,
+          winners_count: 1,
+        })
+        .select("id")
+        .single();
+      expect(
+        seeded.error,
+        `no se pudo sembrar la fixture: ${seeded.error?.message}`
+      ).toBeNull();
+      const drawId = seeded.data!.id as string;
+
+      const { error } = await creatorA
+        .from("draws")
+        .update({
+          revealed_seed: "33".repeat(32),
+          chain_blockhash: "44".repeat(32),
+          winner_entry_ids: [],
+          status: "revealed",
+        })
+        .eq("id", drawId);
+      expect(error).toBeNull();
+
+      const after = await admin
+        .from("draws")
+        .select("revealed_seed, chain_blockhash, status")
+        .eq("id", drawId)
+        .single();
+      expect(after.data?.revealed_seed).toBe("33".repeat(32));
+      expect(after.data?.chain_blockhash).toBe("44".repeat(32));
+      expect(after.data?.status).toBe("revealed");
+    }
+  );
+});
+
+describe("RLS · aislamiento entre creadores", () => {
+  when()("un creador no puede leer entries de otro creador", async () => {
+    // Same self-contained shape as the anon honeypot test above, but the
+    // reader here is a real authenticated non-owner (creator B) — arguably
+    // the more important case, since it's the same honeypot leak an anon
+    // policy gap would cause, just reachable by anyone with any account.
+    const wallet = "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pge4j1";
+    const seeded = await admin.from("entries").insert({
+      event_id: eventOpen,
+      wallet_address: wallet,
+    });
+    expect(
+      seeded.error,
+      `no se pudo sembrar la fixture: ${seeded.error?.message}`
+    ).toBeNull();
+
+    const asAdmin = await admin
+      .from("entries")
+      .select("id")
+      .eq("event_id", eventOpen);
+    expect(
+      asAdmin.data?.length ?? 0,
+      "la fixture no quedó visible ni para el cliente admin, el test no prueba nada"
+    ).toBeGreaterThan(0);
+    const seededCount = asAdmin.data!.length;
+
+    // Same reasoning as the anon honeypot: a broad default GRANT makes the
+    // table reachable to `authenticated`, so what blocks creator B is the
+    // absence of a matching row in `entries_creator_read`'s policy — 0 rows
+    // with a 200, not a 403. Accept either empty data or an error.
+    const { data, error } = await creatorB
+      .from("entries")
+      .select("*")
+      .eq("event_id", eventOpen);
+    expect(
+      error === null ? data : [],
+      `admin ve ${seededCount} fila(s) para este evento; el otro creador debería ver 0`
+    ).toEqual([]);
+  });
+
+  when()("un creador no puede leer draw_secrets de otro creador", async () => {
+    const seededDraw = await admin
+      .from("draws")
+      .insert({
+        entries_root: "cc".repeat(32),
+        entry_hashes: ["cc".repeat(32)],
+        event_id: eventClosed,
+        amount_per_winner: "1000",
+        seed_commit: "dd".repeat(32),
+        target_slot: 4400,
+        winners_count: 1,
+      })
+      .select("id")
+      .single();
+    expect(
+      seededDraw.error,
+      `no se pudo sembrar el draw: ${seededDraw.error?.message}`
+    ).toBeNull();
+    const drawId = seededDraw.data!.id as string;
+
+    const seededSecret = await admin
+      .from("draw_secrets")
+      .insert({ draw_id: drawId, seed: "ab".repeat(32) });
+    expect(
+      seededSecret.error,
+      `no se pudo sembrar draw_secrets: ${seededSecret.error?.message}`
+    ).toBeNull();
+
+    const asAdmin = await admin
+      .from("draw_secrets")
+      .select("draw_id")
+      .eq("draw_id", drawId);
+    expect(
+      asAdmin.data?.length ?? 0,
+      "la fixture no quedó visible ni para el cliente admin, el test no prueba nada"
+    ).toBeGreaterThan(0);
+
+    // This is the row a rival creator would want most: the raw seed
+    // behind another creator's draw. `draw_secrets_owner` must keep it
+    // at 0 rows, not a permission error — same 200-with-nothing shape as
+    // every other honeypot case in this file.
+    const { data, error } = await creatorB
+      .from("draw_secrets")
+      .select("*")
+      .eq("draw_id", drawId);
+    expect(
+      error === null ? data : [],
+      "el otro creador no debería ver el seed de este draw"
+    ).toEqual([]);
   });
 });
