@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ConfigError,
   loadChainConfig,
+  loadSupabaseConfig,
   parseChainIdentifier,
   type RawEnv,
 } from "./config";
@@ -12,6 +13,11 @@ const VALID: RawEnv = {
   VITE_EXPLORER_URL: "https://cookiescan.io",
   VITE_RPC_URL: "https://rpc.cookiescan.io",
   VITE_WALLET_CHAIN: "solana:mainnet",
+};
+
+const VALID_SUPABASE: RawEnv = {
+  VITE_SUPABASE_PUBLISHABLE_KEY: "test-publishable-key",
+  VITE_SUPABASE_URL: "https://example.supabase.co",
 };
 
 describe("loadChainConfig", () => {
@@ -89,5 +95,46 @@ describe("parseChainIdentifier", () => {
     const warn = vi.fn();
     expect(parseChainIdentifier("solana:devnet", warn)).toBe("solana:devnet");
     expect(warn).not.toHaveBeenCalled();
+  });
+});
+
+describe("loadSupabaseConfig", () => {
+  it("lanza si falta VITE_SUPABASE_URL", () => {
+    const env = { ...VALID_SUPABASE, VITE_SUPABASE_URL: undefined };
+    expect(() => loadSupabaseConfig(env)).toThrow(ConfigError);
+    expect(() => loadSupabaseConfig(env)).toThrow(/VITE_SUPABASE_URL/);
+  });
+
+  it("lanza si falta VITE_SUPABASE_PUBLISHABLE_KEY", () => {
+    const env = {
+      ...VALID_SUPABASE,
+      VITE_SUPABASE_PUBLISHABLE_KEY: undefined,
+    };
+    expect(() => loadSupabaseConfig(env)).toThrow(ConfigError);
+    expect(() => loadSupabaseConfig(env)).toThrow(
+      /VITE_SUPABASE_PUBLISHABLE_KEY/
+    );
+  });
+
+  it("trata una variable en blanco como ausente", () => {
+    expect(() =>
+      loadSupabaseConfig({
+        ...VALID_SUPABASE,
+        VITE_SUPABASE_PUBLISHABLE_KEY: "   ",
+      })
+    ).toThrow(/VITE_SUPABASE_PUBLISHABLE_KEY/);
+  });
+
+  it("rechaza una url malformada", () => {
+    expect(() =>
+      loadSupabaseConfig({ ...VALID_SUPABASE, VITE_SUPABASE_URL: "example" })
+    ).toThrow(/not a valid URL/);
+  });
+
+  it("devuelve la url y la clave publicable cuando el entorno es válido", () => {
+    expect(loadSupabaseConfig(VALID_SUPABASE)).toEqual({
+      anonKey: "test-publishable-key",
+      url: "https://example.supabase.co",
+    });
   });
 });

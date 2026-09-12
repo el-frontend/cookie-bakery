@@ -25,12 +25,14 @@ export class ConfigError extends Error {
 /** Raw env shape, kept separate so tests can supply their own record. */
 export type RawEnv = Readonly<Record<string, string | undefined>>;
 
-/** The five variables `.env.example` documents. All are mandatory. */
+/** The seven variables `.env.example` documents. All are mandatory. */
 export type RequiredVar =
   | "VITE_BRIDGE_URL"
   | "VITE_DAS_URL"
   | "VITE_EXPLORER_URL"
   | "VITE_RPC_URL"
+  | "VITE_SUPABASE_PUBLISHABLE_KEY"
+  | "VITE_SUPABASE_URL"
   | "VITE_WALLET_CHAIN";
 
 function requireVar(env: RawEnv, name: RequiredVar): string {
@@ -99,3 +101,19 @@ export function loadChainConfig(
 }
 
 export const chainConfig: ChainConfig = loadChainConfig(import.meta.env);
+
+export type SupabaseConfig = {
+  readonly anonKey: string;
+  readonly url: string;
+};
+
+export function loadSupabaseConfig(env: RawEnv): SupabaseConfig {
+  return {
+    anonKey: requireVar(env, "VITE_SUPABASE_PUBLISHABLE_KEY"),
+    url: requireHttpsUrl(env, "VITE_SUPABASE_URL"),
+  };
+}
+
+export const supabaseConfig: SupabaseConfig = loadSupabaseConfig(
+  import.meta.env
+);

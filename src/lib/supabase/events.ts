@@ -1,0 +1,151 @@
+import { supabase } from "./client";
+import type { Database } from "./types";
+
+export type EventRow = Database["public"]["Tables"]["events"]["Row"];
+export type EntryRow = Database["public"]["Tables"]["entries"]["Row"];
+
+/** What the public page is allowed to know. */
+export type PublicEvent = {
+  entryCount: number;
+  mint: string;
+  mintDecimals: number;
+  mintSymbol: string | null;
+  slug: string;
+  status: EventRow["status"];
+  title: string;
+};
+
+/**
+ * `numeric(39,0)` arrives from supabase-js as a STRING, and it has to stay one
+ * until BigInt. Routing it through Number would round away the tail of any
+ * amount past 2^53, which is most supplies at nine decimals.
+ */
+export function parseBaseUnits(value: string | null): bigint {
+  if (value === null) {
+    throw new RangeError("Expected a numeric base-unit amount, got null.");
+  }
+  if (!/^\d+$/.test(value)) {
+    throw new RangeError(`"${value}" is not an integer amount of base units.`);
+  }
+  return BigInt(value);
+}
+
+const UNIQUE_VIOLATION = "23505";
+
+/**
+ * anon has no SELECT policy on `entries`, so we cannot look before inserting.
+ * The unique constraint IS the check, and its error is the answer the visitor
+ * needs to see.
+ */
+export function registrationOutcome(
+  error: { code?: string; message: string } | null
+): "already-registered" | "ok" {
+  if (error === null) return "ok";
+  if (error.code === UNIQUE_VIOLATION) return "already-registered";
+  throw new Error(error.message);
+}
+
+export async function createEvent(input: {
+  mint: string;
+  mintDecimals: number;
+  mintSymbol: string | null;
+  slug: string;
+  title: string;
+}): Promise<EventRow> {
+  // `events_owner_all`'s `with check (creator_id = (select auth.uid()))`
+  // means the insert is rejected unless `creator_id` is set to the caller's
+  // own id — the column has no default, so this cannot be left out.
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError) throw new Error(authError.message);
+  if (!user) throw new Error("You must be signed in to create an event.");
+
+  const { data, error } = await supabase
+    .from("events")
+    .insert({
+      creator_id: user.id,
+      mint: input.mint,
+      mint_decimals: input.mintDecimals,
+      mint_symbol: input.mintSymbol,
+      slug: input.slug,
+      title: input.title,
+    })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function openEvent(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("events")
+    .update({ opened_at: new Date().toISOString(), status: "open" })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function closeEvent(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("events")
+    .update({ closed_at: new Date().toISOString(), status: "closed" })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function listMyEvents(): Promise<EventRow[]> {
+  const { data, error } = await supabase
+    .from("events")
+    .select()
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function getPublicEvent(
+  slug: string
+): Promise<PublicEvent | null> {
+  const { data, error } = await supabase
+    .from("events")
+    .select(
+      "entry_count, mint, mint_decimals, mint_symbol, slug, status, title"
+    )
+    .eq("slug", slug)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (data === null) return null;
+  return {
+    entryCount: data.entry_count,
+    mint: data.mint,
+    mintDecimals: data.mint_decimals,
+    mintSymbol: data.mint_symbol,
+    slug: data.slug,
+    status: data.status,
+    title: data.title,
+  };
+}
+
+export async function registerEntry(
+  eventId: string,
+  walletAddress: string
+): Promise<"already-registered" | "ok"> {
+  // NOTE the absence of `.select()`. PostgREST only returns the inserted row
+  // when one is chained, and anon has no SELECT policy on `entries` — asking
+  // for the representation back would fail RLS even though the insert itself
+  // is allowed.
+  const { error } = await supabase
+    .from("entries")
+    .insert({ event_id: eventId, wallet_address: walletAddress });
+  return registrationOutcome(error);
+}
+
+export async function listEntries(eventId: string): Promise<EntryRow[]> {
+  const { data, error } = await supabase
+    .from("entries")
+    .select()
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data;
+}
