@@ -16,9 +16,23 @@ export type PublicEvent = {
 };
 
 /**
- * `numeric(39,0)` arrives from supabase-js as a STRING, and it has to stay one
- * until BigInt. Routing it through Number would round away the tail of any
- * amount past 2^53, which is most supplies at nine decimals.
+ * Base units as an exact bigint.
+ *
+ * CAST numeric COLUMNS TO TEXT IN THE SELECT, or this function cannot save
+ * you. PostgREST renders `numeric` as a JSON *number*, so by the time a plain
+ * `select("amount_per_winner")` reaches here the value is already a rounded
+ * double — verified against the live project, where writing
+ * 1000000000000000001 read back as 1000000000000000000 with no error. One
+ * token silently gone, and TypeScript happy, because the generated types
+ * declare the column `number`.
+ *
+ * The shape that works, confirmed round-tripping through BigInt exactly:
+ *
+ *     .select("amount:amount_per_winner::text")
+ *
+ * Writes were never affected — Postgres stores the value correctly; only
+ * reads lost precision. Applies to `draws.amount_per_winner` and
+ * `payouts.amount`.
  */
 export function parseBaseUnits(value: string | null): bigint {
   if (value === null) {
