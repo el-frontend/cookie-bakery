@@ -20,6 +20,14 @@ const REQUIRED = [
   "VITE_WALLET_CHAIN",
 ] as const;
 
+// Creator events (RF-07 phase 1): validated by the future Supabase client
+// module, not by loadChainConfig, so they live outside REQUIRED — but they
+// are genuine, consumed-by-something-eventually config, not stale ones.
+const SUPABASE = [
+  "VITE_SUPABASE_PUBLISHABLE_KEY",
+  "VITE_SUPABASE_URL",
+] as const;
+
 const complete = {
   VITE_BRIDGE_URL: "https://hyperlane.cookiescan.io",
   VITE_DAS_URL: "https://api.cookiescan.io",
@@ -42,8 +50,9 @@ describe(".env.example declara las cinco VITE_*", () => {
       (match) => match[1]
     );
     // A stale variable in the template is a deploy instruction nobody needs
-    // and a reader cannot tell it is dead.
-    expect([...declared].sort()).toEqual([...REQUIRED].sort());
+    // and a reader cannot tell it is dead. SUPABASE vars are the one allowed
+    // exception: real config for a module this task does not build yet.
+    expect([...declared].sort()).toEqual([...REQUIRED, ...SUPABASE].sort());
   });
 
   it("no lleva ningún secreto", () => {
