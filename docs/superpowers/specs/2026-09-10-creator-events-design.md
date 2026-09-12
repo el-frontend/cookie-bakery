@@ -352,7 +352,7 @@ Las lecturas van por **SWR**, no TanStack, para respetar la regla de un solo sis
 
 **Dependencias nuevas:** `@supabase/supabase-js` en runtime; CLI de Supabase en desarrollo, para los tests de RLS.
 
-**Variables de entorno nuevas:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`. El CSP de `vercel.json` ya permite `connect-src 'self' https: wss:`, así que Supabase entra sin cambios — conviene apretarlo a hosts concretos más adelante, pero no bloquea.
+**Variables de entorno nuevas:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`. El CSP de `vercel.json` ya permite `connect-src 'self' https: wss:`, así que Supabase entra sin cambios — conviene apretarlo a hosts concretos más adelante, pero no bloquea.
 
 ---
 

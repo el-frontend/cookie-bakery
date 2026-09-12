@@ -164,7 +164,7 @@ import { type AppClient } from "../providers";
 
 const supabase = createSupabase(
   import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
 );
 
 export function SiwsProbe() {
@@ -209,7 +209,7 @@ export function SiwsProbe() {
 Create a free project at supabase.com, then:
 
 ```bash
-printf '\nVITE_SUPABASE_URL=https://<ref>.supabase.co\nVITE_SUPABASE_ANON_KEY=<anon key>\n' >> .env
+printf '\nVITE_SUPABASE_URL=https://<ref>.supabase.co\nVITE_SUPABASE_PUBLISHABLE_KEY=<anon key>\n' >> .env
 ```
 
 - [ ] **Step 4: Mount the probe and click it with Nightly installed**
@@ -1759,7 +1759,7 @@ Fix anything it reports. This is the check that catches an exposed table with RL
 Add to `vitest.config.ts` inside `test.env`, so the modules that read config do not throw during unrelated tests:
 
 ```ts
-      VITE_SUPABASE_ANON_KEY: "test-anon-key",
+      VITE_SUPABASE_PUBLISHABLE_KEY: "test-anon-key",
       VITE_SUPABASE_URL: "http://127.0.0.1:55321",
 ```
 
@@ -1768,7 +1768,7 @@ Add to `.env.example`:
 ```
 # Supabase (creator events). Anon key only — never the service role key.
 VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_SUPABASE_PUBLISHABLE_KEY=your-anon-key
 ```
 
 Add to `package.json` scripts:
@@ -2064,7 +2064,7 @@ export type SupabaseConfig = {
 
 export function loadSupabaseConfig(env: RawEnv): SupabaseConfig {
   return {
-    anonKey: requireVar(env, "VITE_SUPABASE_ANON_KEY" as RequiredVar),
+    anonKey: requireVar(env, "VITE_SUPABASE_PUBLISHABLE_KEY" as RequiredVar),
     url: requireHttpsUrl(env, "VITE_SUPABASE_URL" as RequiredVar),
   };
 }
@@ -2074,7 +2074,7 @@ export const supabaseConfig: SupabaseConfig = loadSupabaseConfig(
 );
 ```
 
-Widen the `RequiredVar` union with `"VITE_SUPABASE_ANON_KEY" | "VITE_SUPABASE_URL"` and drop the two `as RequiredVar` casts — a cast here would defeat the type that exists to catch a typo'd variable name.
+Widen the `RequiredVar` union with `"VITE_SUPABASE_PUBLISHABLE_KEY" | "VITE_SUPABASE_URL"` and drop the two `as RequiredVar` casts — a cast here would defeat the type that exists to catch a typo'd variable name.
 
 - [ ] **Step 6: Run tests to verify they pass**
 
