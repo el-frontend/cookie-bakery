@@ -4,9 +4,20 @@ import type { Database } from "./types";
 export type EventRow = Database["public"]["Tables"]["events"]["Row"];
 export type EntryRow = Database["public"]["Tables"]["entries"]["Row"];
 
-/** What the public page is allowed to know. */
+/**
+ * What the public page is allowed to know.
+ *
+ * `id` is included even though the row also has a public `slug`: it is what
+ * `registerEntry` needs as `entries.event_id` (a uuid FK, per the
+ * `entries_public_insert` RLS check), and the public page has no other way to
+ * learn it — anon can read `events` but never `entries`. Exposing the id is
+ * not a new leak: RLS is row-level, so anon could already read this column
+ * before it was added to this select, and nothing here is secret the way
+ * `creator_id` is (which stays out of this type).
+ */
 export type PublicEvent = {
   entryCount: number;
+  id: string;
   mint: string;
   mintDecimals: number;
   mintSymbol: string | null;
@@ -123,7 +134,7 @@ export async function getPublicEvent(
   const { data, error } = await supabase
     .from("events")
     .select(
-      "entry_count, mint, mint_decimals, mint_symbol, slug, status, title"
+      "entry_count, id, mint, mint_decimals, mint_symbol, slug, status, title"
     )
     .eq("slug", slug)
     .maybeSingle();
@@ -131,6 +142,7 @@ export async function getPublicEvent(
   if (data === null) return null;
   return {
     entryCount: data.entry_count,
+    id: data.id,
     mint: data.mint,
     mintDecimals: data.mint_decimals,
     mintSymbol: data.mint_symbol,
