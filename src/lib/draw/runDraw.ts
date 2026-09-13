@@ -3,6 +3,13 @@ import { sha256 } from "@noble/hashes/sha2";
 import { parseBaseUnits } from "../supabase/events";
 import { supabase } from "../supabase/client";
 import type { Database } from "../supabase/types";
+import {
+  commitMemo,
+  revealMemo,
+  sendAttestation,
+  type Attestation,
+  type AttestationClient,
+} from "./attest";
 import { canonicalOrder, entriesRoot } from "./hashEntry";
 import { pickWinners } from "./shuffle";
 import type { DrawnEntry } from "./toRecipients";
@@ -15,9 +22,11 @@ import type { DrawnEntry } from "./toRecipients";
  * back. So the promise is the creator's to their audience, and believing the
  * draw requires trusting nobody — not even us.
  *
- * The on-chain commit/reveal MEMO transactions are Task 13's work, not this
- * file's — `commit_slot`, `commit_signature` and `reveal_signature` stay null
- * through everything here, and nothing below assumes they are set.
+ * The on-chain commit/reveal MEMO transactions (Task 13, `./attest.ts`) are
+ * wired in below. `commit_slot < target_slot` is the entire timing proof
+ * `verifyDraw` checks, so `commitDraw` never lets a failed send disappear
+ * silently — see its docstring — and `revealDraw` refuses outright to run
+ * without a `commit_signature` already on the row.
  */
 
 /**
@@ -61,6 +70,7 @@ export function canReveal(input: {
 
 export async function commitDraw(input: {
   amountPerWinner: bigint;
+  client: AttestationClient;
   currentSlot: bigint;
   entries: readonly DrawnEntry[];
   eventId: string;
@@ -98,6 +108,27 @@ export async function commitDraw(input: {
     .insert({ draw_id: data.id, seed: bytesToHex(seed) });
   if (secret.error) throw new Error(secret.error.message);
 
+  // The row above is the real commitment — immutable from here on (the
+  // `draws_commitments_immutable` trigger). Whether the memo that PROVES it
+  // reaches CookieScan is a separate concern, and a failure here must not
+  // unwind the insert above or bubble up as "the draw failed to start": the
+  // draw did start, it just is not attested yet. `attestCommit` is exactly
+  // the retry path for this state, and `DrawPanel` renders "not yet
+  // attested" rather than the normal wait when `commit_signature` is still
+  // null — see this file's docstring and `revealDraw`'s hard guard below,
+  // which is what actually stops an unattested draw from being revealed.
+  try {
+    await attestCommit({
+      client: input.client,
+      commit,
+      drawId: data.id as string,
+      entriesRoot: root,
+      targetSlot,
+    });
+  } catch {
+    // Intentionally swallowed — see comment above.
+  }
+
   return {
     commit,
     drawId: data.id as string,
@@ -105,6 +136,49 @@ export async function commitDraw(input: {
     orderedHashes,
     targetSlot,
   };
+}
+
+/**
+ * Send (or resend) the commit memo for an existing draw and record where it
+ * landed.
+ *
+ * Split out from `commitDraw` so a failed first attempt has a retry path
+ * that does not re-insert a row: `seed_commit`, `target_slot` and
+ * `entries_root` are immutable once written, so retrying can only ever mean
+ * "get THIS memo on chain and record its slot," never "start over."
+ *
+ * `commit_slot` is stored as a JS `number` via `Number(attestation.slot)` —
+ * the same convention `target_slot` already uses in `commitDraw` above.
+ * This is a `bigint` Postgres column, not `numeric`, so the precision-loss
+ * risk `parseBaseUnits`'s docstring warns about (arbitrary-size token
+ * amounts) does not apply: a slot number is nowhere near
+ * `Number.MAX_SAFE_INTEGER`.
+ */
+export async function attestCommit(input: {
+  client: AttestationClient;
+  commit: string;
+  drawId: string;
+  entriesRoot: string;
+  targetSlot: bigint;
+}): Promise<Attestation> {
+  const memo = commitMemo({
+    commit: input.commit,
+    drawId: input.drawId,
+    entriesRoot: input.entriesRoot,
+    targetSlot: input.targetSlot,
+  });
+  const attestation = await sendAttestation(input.client, memo);
+
+  const { error } = await supabase
+    .from("draws")
+    .update({
+      commit_signature: attestation.signature,
+      commit_slot: Number(attestation.slot),
+    })
+    .eq("id", input.drawId);
+  if (error) throw new Error(error.message);
+
+  return attestation;
 }
 
 /**
@@ -135,12 +209,28 @@ export function resolveWinnerEntryIds(
 
 export async function revealDraw(input: {
   blockhash: string;
+  client: AttestationClient;
+  /**
+   * The draw's `commit_signature`, straight from `DrawRow`. `null` means the
+   * commit memo never landed — revealing over an unattested commitment would
+   * produce a draw nobody can verify (spec §5.1), which is worse than no
+   * draw at all, so this throws rather than proceeding. `DrawPanel` disables
+   * the Reveal button for the same reason, but that is UI, not a guarantee —
+   * this is the actual guard.
+   */
+  commitSignature: string | null;
   drawId: string;
   entries: readonly DrawnEntry[];
   orderedHashes: readonly string[];
   seed: Uint8Array;
   winnersCount: number;
 }): Promise<{ winnerEntryIds: string[]; winners: string[] }> {
+  if (input.commitSignature === null) {
+    throw new Error(
+      "This draw has not been attested on chain yet — it cannot be revealed."
+    );
+  }
+
   const winners = pickWinners(
     input.orderedHashes,
     input.winnersCount,
@@ -152,11 +242,33 @@ export async function revealDraw(input: {
   // them here rather than re-deriving the mapping at every call site.
   const winnerEntryIds = resolveWinnerEntryIds(winners, input.entries);
 
+  // Same shape as the commit: `entriesRoot` over the winning hashes, in the
+  // order `pickWinners` returned them. `DrawPanel`'s revealed state recomputes
+  // this identically, from persisted columns, for reload-safe display.
+  const winnersRoot = entriesRoot(winners);
+  const seedHex = bytesToHex(input.seed);
+
+  // Unlike `commitDraw`, a failed send here is NOT swallowed: it must throw
+  // and leave the row exactly as it was (still `committed`, attested), so a
+  // retry re-enters this same function rather than the product silently
+  // showing "revealed" winners with no on-chain reveal memo to check them
+  // against.
+  const attestation = await sendAttestation(
+    input.client,
+    revealMemo({
+      blockhash: input.blockhash,
+      drawId: input.drawId,
+      seed: seedHex,
+      winnersRoot,
+    })
+  );
+
   const { error } = await supabase
     .from("draws")
     .update({
       chain_blockhash: input.blockhash,
-      revealed_seed: bytesToHex(input.seed),
+      reveal_signature: attestation.signature,
+      revealed_seed: seedHex,
       status: "revealed",
       winner_entry_ids: winnerEntryIds,
     })
@@ -169,10 +281,14 @@ export async function revealDraw(input: {
 export type DrawRow = {
   amountPerWinner: bigint;
   chainBlockhash: string | null;
+  /** `null` until the commit memo lands — the signal `DrawPanel` gates reveal on. */
+  commitSignature: string | null;
+  commitSlot: number | null;
   drawId: string;
   entriesRoot: string;
   orderedHashes: string[];
   revealedSeed: string | null;
+  revealSignature: string | null;
   seedCommit: string;
   status: Database["public"]["Tables"]["draws"]["Row"]["status"];
   targetSlot: bigint;
@@ -198,7 +314,7 @@ export async function getDrawForEvent(
   const { data, error } = await supabase
     .from("draws")
     .select(
-      "amount:amount_per_winner::text, chain_blockhash, entries_root, entry_hashes, id, revealed_seed, seed_commit, status, target_slot, winner_entry_ids, winners_count"
+      "amount:amount_per_winner::text, chain_blockhash, commit_signature, commit_slot, entries_root, entry_hashes, id, reveal_signature, revealed_seed, seed_commit, status, target_slot, winner_entry_ids, winners_count"
     )
     .eq("event_id", eventId)
     .order("created_at", { ascending: false })
@@ -210,10 +326,13 @@ export async function getDrawForEvent(
   return {
     amountPerWinner: parseBaseUnits(data.amount),
     chainBlockhash: data.chain_blockhash,
+    commitSignature: data.commit_signature,
+    commitSlot: data.commit_slot,
     drawId: data.id,
     entriesRoot: data.entries_root,
     orderedHashes: data.entry_hashes,
     revealedSeed: data.revealed_seed,
+    revealSignature: data.reveal_signature,
     seedCommit: data.seed_commit,
     status: data.status,
     targetSlot: BigInt(data.target_slot),

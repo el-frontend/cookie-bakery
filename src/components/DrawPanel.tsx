@@ -4,11 +4,13 @@ import { useAction, useClient } from "@solana/react";
 import useSWR from "swr";
 import { Button, ButtonLink } from "./ui/Button";
 import { Field, Input } from "./ui/Field";
+import { explorer } from "../lib/chain/explorer";
 import { formatElapsed, useElapsed } from "../hooks/useElapsed";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { useToast } from "../hooks/useToast";
 import { entriesRoot, hashEntry } from "../lib/draw/hashEntry";
 import {
+  attestCommit,
   canReveal,
   commitDraw,
   getDrawForEvent,
@@ -24,14 +26,21 @@ import { toBaseUnits } from "../lib/token/bakeForm";
 import type { AppClient } from "../providers";
 
 /**
- * The draw itself: commit, wait for a slot that does not exist yet, reveal.
+ * The draw itself: commit, attest on chain, wait for a slot that does not
+ * exist yet, reveal.
  *
  * Lives beside `EventCard` rather than inside it (`EventCard` is a finished,
  * reviewed component from an earlier task) — `Events.tsx` renders one of
  * these per event, and it renders nothing until the event is `closed` or
  * `paid`. Everything is keyed off the database, not local component state,
  * so a reload mid-wait — or an audience member arriving after the fact —
- * lands on the right one of the three states below rather than back at zero.
+ * lands on the right one of the states below rather than back at zero.
+ *
+ * Setup → committed-but-unattested (only when the commit memo failed to
+ * land — see `attestCommit` in `runDraw.ts`) → waiting → revealed. The
+ * middle state is not cosmetic: `verifyDraw`'s whole timing proof is
+ * `commit_slot < target_slot`, so nothing here ever offers Reveal without a
+ * `commit_signature` already on the row.
  */
 
 const SLOT_POLL_MS = 1_000;
@@ -126,10 +135,26 @@ export function DrawPanel({ event }: { event: EventRow }) {
     const currentSlot = (await client.rpc.getSlot().send()) as bigint;
     await commitDraw({
       amountPerWinner,
+      client,
       currentSlot,
       entries: drawnEntries,
       eventId: event.id,
       winnersCount,
+    });
+    await mutateDraw();
+  });
+
+  // Retries JUST the on-chain memo for a draw that already exists in the
+  // database — never re-commits. Only reachable from the "not yet attested"
+  // state below, which is exactly when `commitDraw`'s own attempt failed.
+  const attestAction = useAction(async () => {
+    if (!draw) throw new Error("Nothing to attest yet.");
+    await attestCommit({
+      client,
+      commit: draw.seedCommit,
+      drawId: draw.drawId,
+      entriesRoot: draw.entriesRoot,
+      targetSlot: draw.targetSlot,
     });
     await mutateDraw();
   });
@@ -160,6 +185,8 @@ export function DrawPanel({ event }: { event: EventRow }) {
     const seed = await getDrawSeed(draw.drawId);
     const result = await revealDraw({
       blockhash: block.blockhash,
+      client,
+      commitSignature: draw.commitSignature,
       drawId: draw.drawId,
       entries: drawnEntries,
       orderedHashes: draw.orderedHashes,
@@ -184,6 +211,19 @@ export function DrawPanel({ event }: { event: EventRow }) {
     });
     commitAction.reset();
   }, [commitAction, toast]);
+
+  useEffect(() => {
+    if (!attestAction.error) return;
+    toast.show({
+      detail:
+        attestAction.error instanceof Error
+          ? attestAction.error.message
+          : "Please try again.",
+      title: "Could not attest the draw",
+      variant: "error",
+    });
+    attestAction.reset();
+  }, [attestAction, toast]);
 
   useEffect(() => {
     if (!revealAction.error) return;
@@ -288,9 +328,42 @@ export function DrawPanel({ event }: { event: EventRow }) {
     );
   }
 
-  // WAITING — committed, the target slot has not happened yet (or reveal is
-  // in flight). This is the whole point of the feature, not a spinner to get
-  // past: the copy says exactly what is being waited on and why.
+  // NOT YET ATTESTED — committed in the database, but the commit memo never
+  // landed on chain (or `commitDraw`'s attempt failed). This is NOT the
+  // normal wait: `verifyDraw`'s entire timing proof is `commit_slot <
+  // target_slot`, and there is no `commit_slot` to compare without this memo,
+  // so revealing from here would produce a draw nobody could verify. Nothing
+  // below offers a Reveal button — only a retry for the attestation itself.
+  if (draw.status === "committed" && draw.commitSignature === null) {
+    return (
+      <div
+        className="flex flex-col gap-4 rounded-xl border border-dashed border-border-strong bg-card/40 p-5"
+        data-testid="draw-unattested"
+      >
+        <span className="inline-flex w-fit items-center rounded-full bg-danger/12 px-2.5 py-1 text-[11.5px] font-semibold uppercase tracking-[0.04em] text-danger">
+          Not yet attested
+        </span>
+        <p className="text-[14.5px] leading-relaxed text-ink-2">
+          This draw's commitment hasn't been recorded on Cookie Chain yet, so it
+          can't be revealed — the timing proof needs that transaction on chain
+          first. Retry sending it below.
+        </p>
+        <Button
+          className="self-start"
+          data-testid="attest-draw"
+          disabled={attestAction.isRunning}
+          onClick={() => attestAction.dispatch()}
+        >
+          {attestAction.isRunning ? "Attesting…" : "Retry attestation"}
+        </Button>
+      </div>
+    );
+  }
+
+  // WAITING — committed and attested, the target slot has not happened yet
+  // (or reveal is in flight). This is the whole point of the feature, not a
+  // spinner to get past: the copy says exactly what is being waited on and
+  // why.
   if (draw.status === "committed") {
     const startSlot = draw.targetSlot - TARGET_SLOT_LEAD;
     const progress =
@@ -348,6 +421,17 @@ export function DrawPanel({ event }: { event: EventRow }) {
           </span>
         </div>
 
+        {draw.commitSignature ? (
+          <a
+            className="self-start text-[12.5px] font-medium text-accent underline underline-offset-2"
+            href={explorer.txUrl(draw.commitSignature)}
+            rel="noreferrer"
+            target="_blank"
+          >
+            View commit tx on CookieScan →
+          </a>
+        ) : null}
+
         <Button
           className="self-start"
           data-testid="reveal-draw"
@@ -363,8 +447,8 @@ export function DrawPanel({ event }: { event: EventRow }) {
 
   // REVEALED — winners, the seed, the blockhash, and a way to check all of it
   // independently. `winnersRoot` is recomputed from public columns rather
-  // than stored anywhere: it is exactly what Task 13's reveal memo will
-  // commit on-chain, and the verifier (verifyDraw.ts) recomputes the same
+  // than stored anywhere: it is exactly what the reveal memo (`attest.ts`)
+  // committed on-chain, and the verifier (verifyDraw.ts) recomputes the same
   // value the same way.
   const addressByEntryId = new Map(
     drawnEntries.map((entry) => [entry.entryId, entry.walletAddress])
@@ -433,6 +517,29 @@ export function DrawPanel({ event }: { event: EventRow }) {
           </div>
         ) : null}
       </dl>
+
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+        {draw.commitSignature ? (
+          <a
+            className="text-[12.5px] font-medium text-accent underline underline-offset-2"
+            href={explorer.txUrl(draw.commitSignature)}
+            rel="noreferrer"
+            target="_blank"
+          >
+            View commit tx →
+          </a>
+        ) : null}
+        {draw.revealSignature ? (
+          <a
+            className="text-[12.5px] font-medium text-accent underline underline-offset-2"
+            href={explorer.txUrl(draw.revealSignature)}
+            rel="noreferrer"
+            target="_blank"
+          >
+            View reveal tx →
+          </a>
+        ) : null}
+      </div>
 
       <ButtonLink
         className="self-start"
