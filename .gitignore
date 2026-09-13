@@ -36,3 +36,6 @@ design/cookie-bakery-redesign.html
 
 # Test runner scratch (JSON reporter output)
 .vitest
+
+# Cloudflare Workers local state
+.wrangler

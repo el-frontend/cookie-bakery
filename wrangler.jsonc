@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "cookie-bakery",
+  "compatibility_date": "2026-09-12",
+
+  // Assets only: there is no Worker script, because there is no server side.
+  // The app talks to Cookie Chain's RPC and to Supabase straight from the
+  // browser, so Cloudflare's whole job here is serving files.
+  "assets": {
+    "directory": "./dist",
+
+    // Without this, /e/<slug> and /e/<slug>/verify return 404 — the two public
+    // routes of the events feature. The app does its own path routing in
+    // main.tsx, so every unmatched path has to reach index.html for that code
+    // to run at all. This is the single most forgettable line in the file.
+    "not_found_handling": "single-page-application",
+  },
+
+  "observability": {
+    "enabled": true,
+  },
+}

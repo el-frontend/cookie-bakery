@@ -240,10 +240,40 @@ in the **How to start** modal in the header.
 
 ## Deploying
 
-The repo ships a [`vercel.json`](./vercel.json) with an SPA rewrite and a
-Content-Security-Policy. Import the repo in Vercel, set the five environment
-variables above, and deploy — the build command and output directory are
-already declared.
+### Cloudflare Workers
+
+The app is entirely client-side — it talks to Cookie Chain's RPC and to Supabase
+straight from the browser — so this deploys as **static assets with no Worker
+script**. [`wrangler.jsonc`](./wrangler.jsonc) and
+[`public/_headers`](./public/_headers) carry the whole configuration.
+
+```bash
+npm run deploy          # build, then wrangler deploy
+npm run deploy:dry      # build and validate without shipping
+```
+
+`wrangler login` once first, in a terminal — it opens a browser.
+
+Two things to know:
+
+- **`not_found_handling: "single-page-application"` is load-bearing.** Without
+  it `/e/<slug>` and `/e/<slug>/verify` return 404, which takes out the public
+  half of the events feature. The app routes on the path itself in `main.tsx`,
+  so every unmatched URL has to reach `index.html` for that code to run.
+- **`VITE_*` values are baked into the bundle at build time**, not read at
+  runtime. They are not Worker secrets and never should be: whatever is in
+  `.env` when you run the build is what ships to every visitor. That is correct
+  for the publishable key, which is public by design, and it is why
+  `SUPABASE_SECRET_KEY`, `SUPABASE_DB_URL` and `SUPABASE_ACCESS_TOKEN` carry no
+  prefix and never go near Cloudflare — there is no server-side code that could
+  use them anyway.
+
+### Vercel
+
+[`vercel.json`](./vercel.json) is still present with the equivalent SPA rewrite
+and headers. If both deploys stay alive, keep the two header sets in step — a
+CSP on one host and not the other is worse than neither, because it invites the
+assumption that both are covered.
 
 **Two CSP decisions worth knowing about**, both forced by the feature set
 rather than chosen:

@@ -1,0 +1,18 @@
+# Response headers for the Cloudflare Workers deploy. Vite copies this file
+# from public/ into dist/ verbatim; Cloudflare reads it at deploy time.
+#
+# This is the port of the `headers` block in vercel.json. Keep the two in step
+# if both deploys stay alive — a CSP that protects one host and not the other
+# is worse than none, because it invites the assumption that both are covered.
+
+/*
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'none'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' https:; connect-src 'self' https: wss:; upgrade-insecure-requests
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  X-Frame-Options: DENY
+  Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()
+
+# Vite fingerprints these filenames, so a changed file gets a new URL and a
+# year-long cache can never serve a stale one.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
