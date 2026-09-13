@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import useSWR from "swr";
 import { useAction, useClient } from "@solana/react";
 import { CreatorSignIn } from "../components/CreatorSignIn";
+import { DrawPanel } from "../components/DrawPanel";
 import { EventCard } from "../components/EventCard";
 import { EventForm, type CreateEventInput } from "../components/EventForm";
 import { TokenSelector, type SelectedToken } from "../components/TokenSelector";
@@ -153,13 +154,15 @@ export function Events({
         ) : events && events.length > 0 ? (
           <div className="flex flex-col gap-4" data-testid="events-list">
             {events.map((event) => (
-              <EventCard
-                event={event}
-                key={event.id}
-                onAirdrop={onAirdrop}
-                onClose={() => closeOne(event.id)}
-                onOpen={() => openOne(event.id)}
-              />
+              <div className="flex flex-col gap-4" key={event.id}>
+                <EventCard
+                  event={event}
+                  onAirdrop={onAirdrop}
+                  onClose={() => closeOne(event.id)}
+                  onOpen={() => openOne(event.id)}
+                />
+                <DrawPanel event={event} />
+              </div>
             ))}
           </div>
         ) : (
