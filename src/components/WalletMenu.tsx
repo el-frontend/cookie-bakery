@@ -191,9 +191,10 @@ export function WalletMenu({ client }: { client: ClientWithWallet }) {
         onClick={() => setOpen((was) => !was)}
         ref={triggerRef}
       >
-        <span className="font-mono text-[12.5px] text-ink">
-          {truncateAddress(address)}
-        </span>
+        {/* The address lives in the menu, not here. It is the widest thing in
+            the header and the least useful at a glance — nobody reads their
+            own address, they check their balance. The full value is one click
+            away, and `aria-label` above still announces it. */}
         <span className="rounded-[6px] bg-raised px-[9px] py-1 text-[11.5px] font-semibold text-accent num">
           {lamports == null ? "…" : `${formatCook(lamports)} COOK`}
         </span>

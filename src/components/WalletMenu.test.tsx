@@ -88,13 +88,17 @@ describe("WalletMenu", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("el chip muestra dirección y saldo, y abre el menú", async () => {
+  it("el chip muestra el saldo pero no la dirección, y abre el menú", async () => {
     const user = userEvent.setup();
     render(<WalletMenu client={client} />);
 
     const trigger = screen.getByTestId("wallet-menu-trigger");
-    expect(trigger).toHaveTextContent("Cook…1111");
     expect(trigger).toHaveTextContent("2.5 COOK");
+    // La dirección vive en el menú, no en la cabecera: es lo más ancho del
+    // header y lo menos útil de un vistazo. Sigue anunciada por aria-label
+    // para quien use lector de pantalla.
+    expect(trigger).not.toHaveTextContent("Cook…1111");
+    expect(trigger.getAttribute("aria-label")).toContain("CookieAddr1111");
     expect(trigger).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByTestId("wallet-menu")).toBeNull();
 
