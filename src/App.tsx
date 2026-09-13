@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useState } from "react";
 import { useClient } from "@solana/react";
 import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { Airdrop } from "./app/Airdrop";
@@ -9,7 +9,20 @@ import { GettingStartedModal } from "./components/GettingStartedModal";
 import { TopBar, type Section } from "./components/TopBar";
 import type { SelectedToken } from "./components/TokenSelector";
 import { WalletButton } from "./components/WalletButton";
+import { useToast } from "./hooks/useToast";
+import type { Recipient } from "./lib/airdrop/buildPlan";
 import { client, type AppClient } from "./providers";
+
+/**
+ * `@supabase/supabase-js` plus `swr` is real weight (this pushed the eager
+ * bundle from ~512 kB to ~748 kB when imported directly), and Events is its
+ * only consumer, on one of four screens — the same shape as `HoldersChart` in
+ * `Oven.tsx`. Loading it eagerly would make Bake/Airdrop/Oven-only visitors
+ * pay for a database client they never touch.
+ */
+const Events = lazy(() =>
+  import("./app/Events").then((module) => ({ default: module.Events }))
+);
 
 /**
  * The warm-dark shell.
@@ -36,6 +49,7 @@ export default function App() {
   // The top bar already carries the address and balance, so the full wallet
   // panel is only worth its space while there is nothing connected.
   const connected = useConnectedWallet(useClient<AppClient>());
+  const toast = useToast();
 
   const navigate = useCallback((next: Section) => {
     setSection(next);
@@ -60,6 +74,25 @@ export default function App() {
     setSection("airdrop");
     setHasNavigated(true);
   }, []);
+
+  // The Events panel's per-event "Send with Airdrop" hands over a token AND
+  // a recipient list (a closed event's registrants). Only the token can be
+  // pre-filled today — Airdrop's CSV importer is the only way in for rows,
+  // and wiring a pre-filled recipient table through it is later tasks' work
+  // (the draw and the richer manual-send tool). Surfacing the count here
+  // keeps the hand-off honest about what actually carried over.
+  const airdropRecipients = useCallback(
+    (token: SelectedToken, recipients: Recipient[]) => {
+      airdropToken(token);
+      toast.show({
+        detail:
+          "Amounts aren't pre-filled yet — add them via the CSV importer below.",
+        title: `${recipients.length} registered wallet${recipients.length === 1 ? "" : "s"} ready`,
+        variant: "success",
+      });
+    },
+    [airdropToken, toast]
+  );
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-bg1 text-foreground">
@@ -105,6 +138,14 @@ export default function App() {
                   initialToken={handoffToken}
                   onBake={() => navigate("bake")}
                 />
+              ) : section === "events" ? (
+                <Suspense
+                  fallback={
+                    <div className="h-40 animate-pulse rounded-xl border border-border-low bg-card" />
+                  }
+                >
+                  <Events onAirdrop={airdropRecipients} />
+                </Suspense>
               ) : (
                 <Oven
                   client={client}

@@ -6,12 +6,13 @@ import { chainConfig } from "../lib/chain/config";
 import { useRpcHealth } from "../hooks/useRpcHealth";
 import type { AppClient } from "../providers";
 
-export type Section = "airdrop" | "bake" | "oven";
+export type Section = "airdrop" | "bake" | "events" | "oven";
 
 const SECTIONS: { id: Section; label: string }[] = [
   { id: "bake", label: "Bake" },
   { id: "airdrop", label: "Airdrop" },
   { id: "oven", label: "Oven" },
+  { id: "events", label: "Events" },
 ];
 
 /** Host only — the full URL is noise in a status chip. */
@@ -45,7 +46,7 @@ export function TopBar({
   const { isHealthy, latencyMs } = useRpcHealth(getSlot);
 
   return (
-    <header className="flex items-center justify-between gap-3 border-b border-[#211d19] px-6 py-[18px] sm:px-8">
+    <header className="flex items-center justify-between gap-2 border-b border-[#211d19] px-6 py-[18px] sm:gap-3 sm:px-8">
       <div className="flex min-w-0 flex-1 items-center justify-start gap-2.5">
         <span className="shrink-0 text-accent">
           <BakeryMark />
@@ -66,7 +67,7 @@ export function TopBar({
               onClick={() => onNavigate(section.id)}
               aria-current={on ? "page" : undefined}
               className={
-                "rounded-full px-[18px] py-2 text-[13.5px] transition-colors duration-[160ms] [transition-timing-function:var(--ease-strong-out)] " +
+                "rounded-full px-2 py-2 text-[13.5px] transition-colors duration-[160ms] [transition-timing-function:var(--ease-strong-out)] sm:px-[18px] " +
                 (on
                   ? "bg-accent font-semibold text-accent-ink"
                   : "font-medium text-ink-2 hover:text-ink")
