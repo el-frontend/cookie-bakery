@@ -186,7 +186,7 @@ export function WalletMenu({ client }: { client: ClientWithWallet }) {
         aria-expanded={open}
         aria-haspopup="menu"
         aria-label={`Wallet ${activeWallet.name}, ${address}`}
-        className="flex items-center gap-[9px] rounded-md border border-border-low bg-card py-[7px] pl-3 pr-2 transition-[transform,border-color] duration-[160ms] [transition-timing-function:var(--ease-strong-out)] hover:border-border-strong active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        className="flex min-w-0 items-center gap-[9px] rounded-md border border-border-low bg-card py-[7px] pl-3 pr-2 transition-[transform,border-color] duration-[160ms] [transition-timing-function:var(--ease-strong-out)] hover:border-border-strong active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         data-testid="wallet-menu-trigger"
         onClick={() => setOpen((was) => !was)}
         ref={triggerRef}
@@ -194,8 +194,13 @@ export function WalletMenu({ client }: { client: ClientWithWallet }) {
         {/* The address lives in the menu, not here. It is the widest thing in
             the header and the least useful at a glance — nobody reads their
             own address, they check their balance. The full value is one click
-            away, and `aria-label` above still announces it. */}
-        <span className="rounded-[6px] bg-raised px-[9px] py-1 text-[11.5px] font-semibold text-accent num">
+            away, and `aria-label` above still announces it.
+
+            The balance is capped and truncates because it has no natural
+            width: a creator holding millions renders a chip wide enough to
+            push the whole header off a phone. The menu below shows it in
+            full, so nothing is lost. */}
+        <span className="max-w-[132px] truncate rounded-[6px] bg-raised px-[9px] py-1 text-[11.5px] font-semibold text-accent num">
           {lamports == null ? "…" : `${formatCook(lamports)} COOK`}
         </span>
         <span
@@ -222,6 +227,10 @@ export function WalletMenu({ client }: { client: ClientWithWallet }) {
             </span>
             <span className="font-mono text-[11.5px] text-ink-3">
               {truncateAddress(address, 8, 8)}
+            </span>
+            {/* In full, because the header chip truncates it. */}
+            <span className="text-[11.5px] font-semibold text-accent num">
+              {lamports == null ? "…" : `${formatCook(lamports)} COOK`}
             </span>
           </div>
 
