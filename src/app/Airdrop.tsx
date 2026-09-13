@@ -27,6 +27,7 @@ import {
   splitIntoBatches,
   toStoredBatch,
   type AirdropRunner,
+  type BatchRun,
   type RunnerState,
   type TransferBatch,
 } from "../lib/airdrop/executor";
@@ -38,6 +39,10 @@ import { readSourceAccount } from "../lib/airdrop/sourceAccount";
 import { validateRows } from "../lib/airdrop/validateRows";
 import { mapError } from "../lib/errors/mapError";
 import type { MappedError } from "../lib/errors/types";
+import {
+  recordPayouts,
+  type PayoutEventContext,
+} from "../lib/supabase/payouts";
 import { fromBaseUnits } from "../lib/token/bakeForm";
 import {
   loadRuns,
@@ -91,22 +96,75 @@ function download(run: AirdropRun): void {
   URL.revokeObjectURL(url);
 }
 
+/**
+ * Mirror one confirmed batch into `payouts` (spec §2 rule 3).
+ *
+ * Called from the runner's existing `onBatch` hook — the same extension point
+ * `recordBatch` already uses for localStorage — never from inside the
+ * engine. Only ever invoked for a batch that just turned `confirmed`, so a
+ * row here always carries the signature that proves it: this app never
+ * writes a payout row before the chain confirms one.
+ */
+async function mirrorPayouts(
+  context: PayoutEventContext,
+  batch: BatchRun
+): Promise<void> {
+  if (!batch.signature) return;
+  const recipients = batch.recipients
+    .map((recipient) => {
+      const entryId = context.entryIdByAddress[recipient.address as string];
+      return entryId ? { amount: recipient.amount, entryId } : null;
+    })
+    .filter((row): row is { amount: bigint; entryId: string } => row !== null);
+
+  await recordPayouts({
+    drawId: context.drawId,
+    eventId: context.eventId,
+    recipients,
+    signature: batch.signature,
+  });
+}
+
+/** What an event hands over instead of a pasted CSV — see `EventPayout`. */
+export type PreloadedAirdrop = {
+  /**
+   * Recipients already validated and priced (`toRecipients` /
+   * `selectionToRecipients` / `splitPool`) — the same `Recipient[]` shape
+   * `parseCsv` produces, so nothing downstream of this needs to know where
+   * the list came from.
+   */
+  recipients: Recipient[];
+  token: SelectedToken;
+  /** Present only when the recipients came from an event; drives the `payouts` mirror. */
+  eventContext?: PayoutEventContext;
+};
+
 export function Airdrop({
   client,
   initialToken = null,
   onBake,
+  preloaded = null,
 }: {
-  client: AppClient;
+  /**
+   * Optional so a preloaded run (screenshot-tested with no client at all)
+   * never needs one until it actually reads the chain — every real caller in
+   * `App.tsx` always supplies it.
+   */
+  client?: AppClient;
   /** Preselected when the Oven hands a mint over via "Airdrop more". */
   initialToken?: SelectedToken | null;
   /** Sends someone with no tokens to the screen that makes one. */
-  onBake: () => void;
+  onBake?: () => void;
+  /** Skips the paste step entirely and opens straight on the plan/summary stage. */
+  preloaded?: PreloadedAirdrop | null;
 }) {
-  const payer = usePayer(client);
+  const payer = usePayer(client as AppClient);
   const { lamports } = useCookBalance(payer?.address);
   const toast = useToast();
 
-  const [token, setToken] = useState<SelectedToken | null>(initialToken);
+  const [token, setToken] = useState<SelectedToken | null>(
+    preloaded?.token ?? initialToken
+  );
   const [csv, setCsv] = useState("");
   const [merged, setMerged] = useState(false);
   const [prepared, setPrepared] = useState<Prepared | null>(null);
@@ -164,10 +222,11 @@ export function Airdrop({
   const duplicateCount = validation?.duplicates.size ?? 0;
 
   const recipients = useMemo<Recipient[]>(() => {
+    if (preloaded) return preloaded.recipients;
     if (!validation) return [];
     const rows = mergedRows ?? validation.valid;
     return rows.map((row) => ({ address: row.address, amount: row.amount }));
-  }, [mergedRows, validation]);
+  }, [mergedRows, preloaded, validation]);
 
   const total = useMemo(
     () => recipients.reduce((sum, r) => sum + r.amount, 0n),
@@ -204,7 +263,7 @@ export function Airdrop({
 
   /** Rows for the table: every problem row, then as many clean ones as fit. */
   const displayRows = useMemo<RecipientRow[]>(() => {
-    if (!token || !validation) return [];
+    if (!token) return [];
 
     const decimals = token.decimals;
     const existsByOwner = new Map(
@@ -215,6 +274,22 @@ export function Airdrop({
       const exists = existsByOwner.get(owner);
       return exists === undefined ? null : exists ? "exists" : "new";
     };
+
+    // An event already validated its own list (`toRecipients` /
+    // `selectionToRecipients` re-check every address), so there is no CSV
+    // error state to reconcile here — just the recipients as given.
+    if (preloaded) {
+      return preloaded.recipients.map((recipient, index) => ({
+        address: recipient.address as string,
+        amount: fromBaseUnits(recipient.amount, decimals),
+        ata: ataOf(recipient.address),
+        error: null,
+        line: index + 1,
+        mergedFrom: null,
+      }));
+    }
+
+    if (!validation) return [];
 
     if (mergedRows) {
       return [
@@ -257,7 +332,15 @@ export function Airdrop({
         mergedFrom: null,
       };
     });
-  }, [blockingErrors, mergedRows, parsed.rows, prepared, token, validation]);
+  }, [
+    blockingErrors,
+    mergedRows,
+    parsed.rows,
+    preloaded,
+    prepared,
+    token,
+    validation,
+  ]);
 
   const visibleRows = useMemo(() => {
     if (displayRows.length <= MAX_VISIBLE_ROWS) return displayRows;
@@ -277,7 +360,7 @@ export function Airdrop({
     prepared?.transactionCount ?? batchCount(recipients.length, perBatch);
 
   const prepare = useCallback(async () => {
-    if (!token || !payer || recipients.length === 0) return;
+    if (!client || !token || !payer || recipients.length === 0) return;
 
     setIsPreparing(true);
     setPrepareError(null);
@@ -337,6 +420,9 @@ export function Airdrop({
    */
   const send = useCallback(
     async (batch: TransferBatch) => {
+      if (!client) {
+        throw new Error("No RPC client is available to send this batch.");
+      }
       const result = await client.sendTransaction(batch.instructions);
       const signature = readSignature(result);
       if (!signature) {
@@ -373,10 +459,19 @@ export function Airdrop({
       symbol: token.symbol,
     });
 
+    const eventContext = preloaded?.eventContext;
     const runner = createAirdropRunner({
       batches,
       onBatch: (batch) => {
         recordBatch(id, toStoredBatch(batch));
+        if (batch.status === "confirmed" && eventContext) {
+          // Best-effort mirror: the chain already has the real result, so a
+          // failure to write this row must never surface as if the transfer
+          // itself failed.
+          mirrorPayouts(eventContext, batch).catch((raw) => {
+            console.error("Could not mirror a payout to Supabase.", raw);
+          });
+        }
       },
       onChange: setRunState,
       send,
@@ -395,7 +490,7 @@ export function Airdrop({
       variant: summary.finished ? "success" : "error",
     });
     setHistory(loadRuns());
-  }, [payer, prepared, send, toast, token]);
+  }, [payer, preloaded, prepared, send, toast, token]);
 
   const resume = useCallback(async () => {
     const runner = runnerRef.current;
@@ -503,74 +598,73 @@ export function Airdrop({
           Airdrop
         </h2>
         <p className="text-[14.5px] leading-relaxed text-ink-2">
-          Paste <span className="font-mono text-[13.5px]">address,amount</span>{" "}
-          or drop a CSV · up to 1,000 rows.
+          {preloaded ? (
+            "Recipients arrived from an event — review the plan below before sending."
+          ) : (
+            <>
+              Paste{" "}
+              <span className="font-mono text-[13.5px]">address,amount</span> or
+              drop a CSV · up to 1,000 rows.
+            </>
+          )}
         </p>
       </div>
 
       {/*
-       * The empty state names the next action rather than the absence
-       * (AC-06.3): the recipient list is meaningless until a token fixes the
-       * decimals, so "pick a token" is the only useful instruction here.
+       * An event already resolved its own token and recipient list
+       * (`toRecipients` / `selectionToRecipients` re-validate every address),
+       * so there is nothing to paste and no token to pick — this whole
+       * "compose" step, paste UI included, only exists for the CSV path.
        */}
-      {!token ? (
-        <EmptyState
-          action={{ label: "Bake a token first", onClick: onBake }}
-          detail="Pick one of your tokens or paste a mint address below. Amounts are scaled by the mint's decimals, so the list cannot be validated until then."
-          testId="airdrop-empty-state"
-          title="Choose what to airdrop"
-        />
-      ) : null}
-
-      <div className="enter enter-2 flex flex-col gap-4">
-        <TokenSelector
-          onChange={(next) => {
-            setToken(next);
-            setMerged(false);
-            invalidate();
-          }}
-          rpc={client.rpc}
-          value={token}
-        />
-
+      {preloaded ? (
         <div
-          onDragOver={(event) => event.preventDefault()}
-          onDrop={(event) => {
-            event.preventDefault();
-            const file = event.dataTransfer.files[0];
-            if (!file) return;
-            void file.text().then((text) => {
-              setCsv(text);
-              setMerged(false);
-              invalidate();
-            });
-          }}
+          className="enter enter-2 flex flex-col gap-1.5 rounded-xl border border-border-low bg-card p-5"
+          data-testid="airdrop-preloaded-summary"
         >
-          <label
-            className="mb-[7px] block text-xs font-semibold uppercase tracking-[0.06em] text-ink-3"
-            htmlFor="airdrop-csv"
-          >
-            Recipients
-          </label>
-          <textarea
-            aria-label="Recipients"
-            className="h-[168px] w-full resize-y rounded-md border border-border-strong bg-bg1 p-3.5 font-mono text-[13px] outline-none transition-[border-color,box-shadow] duration-[160ms] [transition-timing-function:var(--ease-strong-out)] focus:border-accent focus:shadow-[0_0_0_3px_rgba(232,163,61,0.15)]"
-            id="airdrop-csv"
-            onChange={(event) => {
-              setCsv(event.target.value);
-              setMerged(false);
-              invalidate();
-            }}
-            placeholder={"address,amount\n7pKfR2mNv…,12500\n3xQvR9LmK…,8000"}
-            value={csv}
-          />
-          <div className="mt-2.5 flex flex-wrap items-center gap-3">
-            <input
-              accept=".csv,text/csv,text/plain"
-              aria-label="Upload a CSV"
-              className="text-[12.5px] text-ink-2 file:mr-3 file:rounded-chip file:border file:border-border-strong file:bg-raised file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-ink"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
+          <span className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-3">
+            From your event
+          </span>
+          <p className="text-[14.5px] leading-relaxed text-ink-2">
+            {recipients.length} recipient{recipients.length === 1 ? "" : "s"}{" "}
+            ready to pay in {preloaded.token.symbol || "this token"}.
+          </p>
+        </div>
+      ) : (
+        <>
+          {/*
+           * The empty state names the next action rather than the absence
+           * (AC-06.3): the recipient list is meaningless until a token fixes
+           * the decimals, so "pick a token" is the only useful instruction
+           * here.
+           */}
+          {!token ? (
+            <EmptyState
+              action={{
+                label: "Bake a token first",
+                onClick: onBake ?? (() => {}),
+              }}
+              detail="Pick one of your tokens or paste a mint address below. Amounts are scaled by the mint's decimals, so the list cannot be validated until then."
+              testId="airdrop-empty-state"
+              title="Choose what to airdrop"
+            />
+          ) : null}
+
+          <div className="enter enter-2 flex flex-col gap-4">
+            <TokenSelector
+              onChange={(next) => {
+                setToken(next);
+                setMerged(false);
+                invalidate();
+              }}
+              rpc={(client as AppClient).rpc}
+              value={token}
+            />
+
+            <div
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={(event) => {
+                event.preventDefault();
+                const file = event.dataTransfer.files[0];
                 if (!file) return;
                 void file.text().then((text) => {
                   setCsv(text);
@@ -578,57 +672,96 @@ export function Airdrop({
                   invalidate();
                 });
               }}
-              type="file"
-            />
-            {csv ? (
-              <button
-                className="text-[12.5px] font-medium text-ink-2 underline underline-offset-2"
-                onClick={() => {
-                  setCsv("");
+            >
+              <label
+                className="mb-[7px] block text-xs font-semibold uppercase tracking-[0.06em] text-ink-3"
+                htmlFor="airdrop-csv"
+              >
+                Recipients
+              </label>
+              <textarea
+                aria-label="Recipients"
+                className="h-[168px] w-full resize-y rounded-md border border-border-strong bg-bg1 p-3.5 font-mono text-[13px] outline-none transition-[border-color,box-shadow] duration-[160ms] [transition-timing-function:var(--ease-strong-out)] focus:border-accent focus:shadow-[0_0_0_3px_rgba(232,163,61,0.15)]"
+                id="airdrop-csv"
+                onChange={(event) => {
+                  setCsv(event.target.value);
                   setMerged(false);
                   invalidate();
                 }}
-              >
-                Clear
-              </button>
+                placeholder={
+                  "address,amount\n7pKfR2mNv…,12500\n3xQvR9LmK…,8000"
+                }
+                value={csv}
+              />
+              <div className="mt-2.5 flex flex-wrap items-center gap-3">
+                <input
+                  accept=".csv,text/csv,text/plain"
+                  aria-label="Upload a CSV"
+                  className="text-[12.5px] text-ink-2 file:mr-3 file:rounded-chip file:border file:border-border-strong file:bg-raised file:px-3 file:py-1.5 file:text-[12.5px] file:font-semibold file:text-ink"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    void file.text().then((text) => {
+                      setCsv(text);
+                      setMerged(false);
+                      invalidate();
+                    });
+                  }}
+                  type="file"
+                />
+                {csv ? (
+                  <button
+                    className="text-[12.5px] font-medium text-ink-2 underline underline-offset-2"
+                    onClick={() => {
+                      setCsv("");
+                      setMerged(false);
+                      invalidate();
+                    }}
+                  >
+                    Clear
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {parsed.error ? (
+              <p className="text-[12.5px] text-danger" role="alert">
+                {parsed.error}
+              </p>
+            ) : null}
+
+            {!token && parsed.rows.length > 0 ? (
+              <p className="text-[12.5px] text-ink-3">
+                Pick a token to validate these {parsed.rows.length} rows —
+                amounts depend on its decimals.
+              </p>
+            ) : null}
+
+            {duplicateCount > 0 && !merged ? (
+              <div className="flex flex-wrap items-center gap-3 rounded-lg border border-accent/25 bg-accent/[0.06] px-4 py-3">
+                <p className="text-[12.5px] leading-relaxed text-ink-2">
+                  {duplicateCount}{" "}
+                  {duplicateCount === 1
+                    ? "address appears"
+                    : "addresses appear"}{" "}
+                  more than once. Merging adds their amounts together.
+                </p>
+                <Button
+                  className="ml-auto"
+                  data-testid="airdrop-merge"
+                  onClick={() => {
+                    setMerged(true);
+                    invalidate();
+                  }}
+                  variant="secondary"
+                >
+                  Merge duplicates
+                </Button>
+              </div>
             ) : null}
           </div>
-        </div>
-
-        {parsed.error ? (
-          <p className="text-[12.5px] text-danger" role="alert">
-            {parsed.error}
-          </p>
-        ) : null}
-
-        {!token && parsed.rows.length > 0 ? (
-          <p className="text-[12.5px] text-ink-3">
-            Pick a token to validate these {parsed.rows.length} rows — amounts
-            depend on its decimals.
-          </p>
-        ) : null}
-
-        {duplicateCount > 0 && !merged ? (
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-accent/25 bg-accent/[0.06] px-4 py-3">
-            <p className="text-[12.5px] leading-relaxed text-ink-2">
-              {duplicateCount}{" "}
-              {duplicateCount === 1 ? "address appears" : "addresses appear"}{" "}
-              more than once. Merging adds their amounts together.
-            </p>
-            <Button
-              className="ml-auto"
-              data-testid="airdrop-merge"
-              onClick={() => {
-                setMerged(true);
-                invalidate();
-              }}
-              variant="secondary"
-            >
-              Merge duplicates
-            </Button>
-          </div>
-        ) : null}
-      </div>
+        </>
+      )}
 
       {visibleRows.length > 0 ? (
         <div className="enter enter-3 flex flex-col gap-2">

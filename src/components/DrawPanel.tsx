@@ -2,12 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import { hexToBytes } from "@noble/hashes/utils";
 import { useAction, useClient } from "@solana/react";
 import useSWR from "swr";
+import { EventPayout } from "./EventPayout";
+import type { SelectedToken } from "./TokenSelector";
 import { Button, ButtonLink } from "./ui/Button";
 import { Field, Input } from "./ui/Field";
 import { explorer } from "../lib/chain/explorer";
 import { formatElapsed, useElapsed } from "../hooks/useElapsed";
 import { usePrefersReducedMotion } from "../hooks/usePrefersReducedMotion";
 import { useToast } from "../hooks/useToast";
+import type { Recipient } from "../lib/airdrop/buildPlan";
 import { entriesRoot, hashEntry } from "../lib/draw/hashEntry";
 import {
   attestCommit,
@@ -22,6 +25,7 @@ import { pickWinners } from "../lib/draw/shuffle";
 import type { DrawnEntry } from "../lib/draw/toRecipients";
 import { formatTokenAmountWithSymbol } from "../lib/format/tokenAmount";
 import { listEntries, type EventRow } from "../lib/supabase/events";
+import type { PayoutEventContext } from "../lib/supabase/payouts";
 import { toBaseUnits } from "../lib/token/bakeForm";
 import type { AppClient } from "../providers";
 
@@ -49,7 +53,18 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
-export function DrawPanel({ event }: { event: EventRow }) {
+export function DrawPanel({
+  event,
+  onAirdrop,
+}: {
+  event: EventRow;
+  /** Threaded straight down to `EventPayout` — see `Events.tsx`. */
+  onAirdrop: (
+    token: SelectedToken,
+    recipients: Recipient[],
+    eventContext: PayoutEventContext
+  ) => void;
+}) {
   const client = useClient<AppClient>();
   const toast = useToast();
   const prefersReducedMotion = usePrefersReducedMotion();
@@ -324,6 +339,22 @@ export function DrawPanel({ event }: { event: EventRow }) {
         >
           {commitAction.isRunning ? "Committing…" : "Start the draw"}
         </Button>
+
+        {/*
+         * "Send to selected" and "Split a pool" don't need a draw at all
+         * (spec §6.3) — only the lottery does. Showing them here means a
+         * creator who wants to hand out the same amount to everyone never
+         * has to run a draw just to reach the payout screen.
+         */}
+        {hasEntries ? (
+          <EventPayout
+            drawId={null}
+            entries={drawnEntries}
+            event={event}
+            onAirdrop={onAirdrop}
+            winners={null}
+          />
+        ) : null}
       </div>
     );
   }
@@ -456,17 +487,20 @@ export function DrawPanel({ event }: { event: EventRow }) {
   const winnerAddresses = (draw.winnerEntryIds ?? []).map(
     (entryId) => addressByEntryId.get(entryId) ?? entryId
   );
-  const winnersRoot =
+  // The winning entry HASHES (not `winnerEntryIds`, which are internal
+  // database ids) — `entriesRoot` folds them into one commitment for display,
+  // and `EventPayout`'s "Pay the winners" needs the same list to feed
+  // `toRecipients`, so both are derived from this one array.
+  const winnerHashes =
     draw.revealedSeed && draw.chainBlockhash
-      ? entriesRoot(
-          pickWinners(
-            draw.orderedHashes,
-            draw.winnersCount,
-            hexToBytes(draw.revealedSeed),
-            draw.chainBlockhash
-          )
+      ? pickWinners(
+          draw.orderedHashes,
+          draw.winnersCount,
+          hexToBytes(draw.revealedSeed),
+          draw.chainBlockhash
         )
       : null;
+  const winnersRoot = winnerHashes ? entriesRoot(winnerHashes) : null;
 
   return (
     <div
@@ -540,6 +574,14 @@ export function DrawPanel({ event }: { event: EventRow }) {
           </a>
         ) : null}
       </div>
+
+      <EventPayout
+        drawId={draw.drawId}
+        entries={drawnEntries}
+        event={event}
+        onAirdrop={onAirdrop}
+        winners={winnerHashes}
+      />
 
       <ButtonLink
         className="self-start"

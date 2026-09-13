@@ -15,6 +15,7 @@ import {
   listMyEvents,
   openEvent,
 } from "../lib/supabase/events";
+import type { PayoutEventContext } from "../lib/supabase/payouts";
 import type { AppClient } from "../providers";
 
 /**
@@ -32,7 +33,18 @@ import type { AppClient } from "../providers";
 export function Events({
   onAirdrop,
 }: {
-  onAirdrop: (token: SelectedToken, recipients: Recipient[]) => void;
+  /**
+   * One hand-off, two shapes: `EventCard`'s "Send with Airdrop" calls this
+   * with `0n` placeholder amounts and no `eventContext` (nothing safe to
+   * preload yet), while `DrawPanel`'s `EventPayout` calls it with real,
+   * already-validated amounts and an `eventContext` — the presence of the
+   * third argument is what tells `App.tsx` which one happened.
+   */
+  onAirdrop: (
+    token: SelectedToken,
+    recipients: Recipient[],
+    eventContext?: PayoutEventContext
+  ) => void;
 }) {
   const client = useClient<AppClient>();
   const { status } = useCreatorSession();
@@ -161,7 +173,7 @@ export function Events({
                   onClose={() => closeOne(event.id)}
                   onOpen={() => openOne(event.id)}
                 />
-                <DrawPanel event={event} />
+                <DrawPanel event={event} onAirdrop={onAirdrop} />
               </div>
             ))}
           </div>

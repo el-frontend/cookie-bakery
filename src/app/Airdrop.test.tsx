@@ -407,3 +407,45 @@ describe("Airdrop · historial (AC-03.8)", () => {
     expect(history).toHaveTextContent("1/2 batches");
   });
 });
+
+describe("Airdrop · precargado desde un evento", () => {
+  it("acepta una lista precargada desde un evento y la muestra sin CSV", async () => {
+    // El evento es otra FUENTE de la lista, no otro camino de envío. Si esto
+    // funciona, batching, simulación, pausa y reintento vienen gratis.
+    const recipients = [
+      {
+        address: "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address,
+        amount: 1_000n,
+      },
+      {
+        address: "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL" as Address,
+        amount: 1_000n,
+      },
+    ];
+
+    render(
+      <Airdrop
+        preloaded={{
+          recipients,
+          token: {
+            decimals: 6,
+            mint: "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" as Address,
+            name: "BAKE",
+            program: "token-2022",
+            programAddress: TOKEN_2022_PROGRAM_ADDRESS,
+            supply: 0n,
+            symbol: "BAKE",
+          },
+        }}
+      />,
+      {
+        wrapper: ({ children }: { children: ReactNode }) => (
+          <ToastProvider>{children}</ToastProvider>
+        ),
+      }
+    );
+
+    expect(await screen.findByText(/2 recipients/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/paste/i)).not.toBeInTheDocument();
+  });
+});

@@ -11,6 +11,7 @@ import type { SelectedToken } from "./components/TokenSelector";
 import { WalletButton } from "./components/WalletButton";
 import { useToast } from "./hooks/useToast";
 import type { Recipient } from "./lib/airdrop/buildPlan";
+import type { PayoutEventContext } from "./lib/supabase/payouts";
 import { client, type AppClient } from "./providers";
 
 /**
@@ -31,16 +32,25 @@ const Events = lazy(() =>
  * the canvas depth without competing with the one accent. Everything else is
  * flat surfaces and hairlines.
  *
- * The shell owns the one piece of cross-screen state: the token the Oven hands
- * to the Airdrop when someone clicks "Airdrop more". Keeping it here rather
- * than in a store means it cannot outlive the navigation that created it —
- * a preselected token that survived a reload would be a confusing default.
+ * The shell owns the one piece of cross-screen state: the token (and,
+ * optionally, a recipient list) the Oven or an event hands to the Airdrop
+ * screen. Keeping it here rather than in a store means it cannot outlive the
+ * navigation that created it — a preselected token that survived a reload
+ * would be a confusing default.
  */
+type AirdropHandoff = {
+  /** Present only when the recipients came from an event; drives the `payouts` mirror. */
+  eventContext?: PayoutEventContext;
+  /** Null for a bare token hand-off (Oven's "Airdrop more") — nothing to preload yet. */
+  recipients: Recipient[] | null;
+  token: SelectedToken;
+};
+
 export default function App() {
   const [section, setSection] = useState<Section>("bake");
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpClosing, setHelpClosing] = useState(false);
-  const [handoffToken, setHandoffToken] = useState<SelectedToken | null>(null);
+  const [handoff, setHandoff] = useState<AirdropHandoff | null>(null);
   // The staggered entrance is an introduction, and an introduction only works
   // once. After the first navigation the same 360ms cascade is just latency on
   // the most repeated interaction in the app, so `data-nav` shortens it.
@@ -53,9 +63,9 @@ export default function App() {
 
   const navigate = useCallback((next: Section) => {
     setSection(next);
-    // Only the Oven's explicit handoff should preselect a token; arriving at
+    // Only an explicit hand-off should preselect a token; arriving at
     // Airdrop from the nav must start clean.
-    setHandoffToken(null);
+    setHandoff(null);
     setHasNavigated(true);
   }, []);
 
@@ -70,26 +80,38 @@ export default function App() {
   }, []);
 
   const airdropToken = useCallback((token: SelectedToken) => {
-    setHandoffToken(token);
+    setHandoff({ recipients: null, token });
     setSection("airdrop");
     setHasNavigated(true);
   }, []);
 
-  // The Events panel's per-event "Send with Airdrop" hands over a token AND
-  // a recipient list (a closed event's registrants). Only the token can be
-  // pre-filled today — Airdrop's CSV importer is the only way in for rows,
-  // and wiring a pre-filled recipient table through it is later tasks' work
-  // (the draw and the richer manual-send tool). Surfacing the count here
-  // keeps the hand-off honest about what actually carried over.
+  /**
+   * The Events panel's one way into Airdrop, shared by two callers:
+   * `EventCard`'s "Send with Airdrop" (a closed event's registrants, still
+   * `0n` placeholder amounts — nothing safe to preload, so this only carries
+   * the token over, same as the Oven) and `EventPayout`'s three payout tools
+   * (real, already-validated amounts plus `eventContext`, so the Airdrop
+   * screen can skip straight to the plan/summary stage).
+   */
   const airdropRecipients = useCallback(
-    (token: SelectedToken, recipients: Recipient[]) => {
-      airdropToken(token);
-      toast.show({
-        detail:
-          "Amounts aren't pre-filled yet — add them via the CSV importer below.",
-        title: `${recipients.length} registered wallet${recipients.length === 1 ? "" : "s"} ready`,
-        variant: "success",
-      });
+    (
+      token: SelectedToken,
+      recipients: Recipient[],
+      eventContext?: PayoutEventContext
+    ) => {
+      if (!eventContext) {
+        airdropToken(token);
+        toast.show({
+          detail:
+            "Amounts aren't pre-filled yet — add them via the CSV importer below.",
+          title: `${recipients.length} registered wallet${recipients.length === 1 ? "" : "s"} ready`,
+          variant: "success",
+        });
+        return;
+      }
+      setHandoff({ eventContext, recipients, token });
+      setSection("airdrop");
+      setHasNavigated(true);
     },
     [airdropToken, toast]
   );
@@ -135,8 +157,17 @@ export default function App() {
               ) : section === "airdrop" ? (
                 <Airdrop
                   client={client}
-                  initialToken={handoffToken}
+                  initialToken={handoff?.token ?? null}
                   onBake={() => navigate("bake")}
+                  preloaded={
+                    handoff?.recipients
+                      ? {
+                          eventContext: handoff.eventContext,
+                          recipients: handoff.recipients,
+                          token: handoff.token,
+                        }
+                      : null
+                  }
                 />
               ) : section === "events" ? (
                 <Suspense
