@@ -52,7 +52,17 @@ export type PublishedDrawRow = {
   winnersCount: number;
 };
 
-function computeWinners(row: {
+/**
+ * Recompute a draw's winners (as entry HASHES, never wallet addresses) from
+ * the public columns that determine them.
+ *
+ * Exported for `exportEvent.ts` to reuse: the creator's export needs exactly
+ * this same hash-based winners list — the shape `verifyDraw` consumes — so a
+ * third party can re-verify a draw straight from the exported file. Sharing
+ * this function rather than a second copy of it means the export and the
+ * public verify page can never quietly disagree on what "the winners" means.
+ */
+export function computeWinners(row: {
   blockhash: string | null;
   entryHashes: string[];
   revealedSeed: string | null;

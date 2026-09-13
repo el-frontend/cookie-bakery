@@ -15,13 +15,71 @@ Built for the Superteam Earn **"Create an App on Cookie Chain"** bounty.
 
 ---
 
-## The three screens
+## The four screens
 
 | Screen      | What it does                                                                                                                                                                    |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Bake**    | Creates a Token-2022 mint with metadata, your token account and the whole initial supply **in one transaction**. Optional transfer fee, mint-close authority, authority revoke. |
 | **Airdrop** | Paste `address,amount` or drop a CSV (up to 1,000 rows). Validates every row, merges duplicates, prices the run, then sends batch by batch with pause and per-batch retry.      |
 | **Oven**    | Supply, decimals, authorities, active Token-2022 extensions, top-20 holders with a distribution chart, and the airdrops you ran from this browser.                              |
+| **Events**  | Open a giveaway, share a link, let your audience register themselves, then draw winners verifiably and pay them. See below.                                                     |
+
+## Airdrop events, for creators
+
+The Airdrop screen starts with a CSV. Nobody has one. A creator with an
+audience has names in a chat, not a column of base58 addresses — and that gap
+is where the tool stopped being useful.
+
+Events close it. The creator opens an event, shares a link, and **the audience
+builds the list**:
+
+1. **Open an event** against one of your tokens. You get `/e/<slug>` and a copy
+   button.
+2. **Followers register themselves** at that link — a single mobile-first page
+   where someone pastes their Cookie Chain address. It costs them nothing: no
+   COOK, no gas, no signature.
+3. **Close registration**, then either draw winners at random or pick them by
+   hand, or split a pot across everyone.
+4. **Pay** — the winners go straight into the airdrop engine above, so batching,
+   simulation, pause and per-batch retry all come along unchanged.
+
+### The draw is checkable by anyone
+
+A giveaway where the host announces a winner and nobody can check is the normal
+case, and it is worth nothing. So the draw is commit-reveal, seeded by a
+Cookie Chain block that **does not exist yet** when the commitment is made:
+
+- Before the draw, the creator's browser generates a secret seed, publishes only
+  its SHA-256, and writes that commitment on chain as a memo transaction.
+- The entropy comes from the blockhash of a slot ~150 ahead — about a minute
+  out. Knowing the seed buys the creator nothing, because the hash that mixes
+  with it has not been produced.
+- After the reveal, `/e/<slug>/verify` recomputes the whole thing in the
+  visitor's own browser and shows each check passing or failing, with links to
+  both memo transactions on CookieScan.
+
+What makes the timing provable is on chain, not in our database: the commit
+memo landed in a slot **below** the target slot, and both numbers are public.
+
+Two things it deliberately does not claim. **It is not a VRF** — a validator
+producing the target block has marginal influence over the outcome; for a
+community giveaway that is fine, and pretending otherwise would be worse than
+saying it. And **a verifiable draw does not make the entry list honest**: a
+creator could have padded it with their own wallets. This tool makes the draw
+checkable, not the creator trustworthy.
+
+### Nobody learns who holds which wallet
+
+The draw runs over salted commitments — `SHA256(event_id || 0x00 || wallet)` —
+never over addresses. A follower list is a deanonymisation dataset, so the
+verify page publishes hashes and no address ever appears on it. A participant
+checks their own inclusion by hashing their own address locally and finding it
+in the published list.
+
+The same reasoning drives the database: an anonymous visitor can insert an entry
+and can never read one back. That is enforced by row-level security, which is
+the only security boundary in this feature and has its own suite running against
+real Postgres — see [Running it locally](#running-it-locally).
 
 ### Screenshots
 
@@ -78,19 +136,40 @@ npm run dev
 
 ```bash
 npm run dev           # Vite dev server
-npm test              # Vitest — 400+ tests
+npm test              # Vitest — 570+ tests
 npm run build         # tsc -b && vite build
 npm run lint          # eslint
 npm run ci            # build + lint + format:check
+npm run test:rls      # row-level security, against real Postgres — see below
 ```
 
 `npm run ci` does **not** run the tests. Run both before shipping.
 
+### The row-level security suite
+
+Events store data in Supabase, and row-level security is the only thing
+standing between a creator's follower list and anyone who asks for it. Policies
+cannot be meaningfully mocked, so `npm run test:rls` runs against a real
+Postgres — the project's own Supabase instance, using the values in `.env`.
+
+**A skipped run is not a passing run.** The suite self-skips when it finds no
+credentials, so that `npm test` stays green on a machine without them — which
+means a fully-skipped run looks identical to a green one and proves nothing.
+Check the skip count, not just the colour.
+
+The migration lives in `supabase/migrations/`. Apply it with the CLI, which is
+a devDependency (invoked by path rather than through `npx`, which is unreliable
+in some shells):
+
+```bash
+./node_modules/.bin/supabase db push --db-url "$SUPABASE_DB_URL"
+```
+
 ### Environment variables
 
-All five are **required**. The app validates them at startup and fails with a
-readable message rather than surfacing later as an empty wallet list or a
-silent RPC timeout.
+The five chain variables are **required**. The app validates them at startup and
+fails with a readable message rather than surfacing later as an empty wallet
+list or a silent RPC timeout.
 
 | Variable            | Value for Cookie Chain mainnet    | What it does                                                                      |
 | ------------------- | --------------------------------- | --------------------------------------------------------------------------------- |
@@ -99,6 +178,21 @@ silent RPC timeout.
 | `VITE_EXPLORER_URL` | `https://cookiescan.io`           | Base for every explorer link in the UI.                                           |
 | `VITE_BRIDGE_URL`   | `https://hyperlane.cookiescan.io` | Linked from "not enough COOK" errors and the help modal.                          |
 | `VITE_WALLET_CHAIN` | `solana:mainnet`                  | Wallet Standard chain id. ⚠️ See the warning below.                               |
+
+Events add two more. They are only needed for that screen; without them the
+other three work as before.
+
+| Variable                        | What it does                                                                        |
+| ------------------------------- | ----------------------------------------------------------------------------------- |
+| `VITE_SUPABASE_URL`             | Your Supabase project URL.                                                          |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | The browser key. Public by design — row-level security protects the data, not this. |
+
+> **The `VITE_` prefix is a security boundary, not a naming convention.** Vite
+> inlines every `VITE_*` value into the bundle it ships to browsers. The
+> tooling-only variables — `SUPABASE_SECRET_KEY` for the RLS suite,
+> `SUPABASE_DB_URL` for migrations, `SUPABASE_ACCESS_TOKEN` for the CLI — have
+> no prefix for exactly that reason. Adding one to any of them would publish it
+> to every visitor.
 
 > ⚠️ **`VITE_WALLET_CHAIN` fails silently when wrong.** Wallet discovery filters
 > on `uiWallet.chains.includes(chain)`, so a value no installed wallet
@@ -198,9 +292,28 @@ Honest status, rather than a checklist of green ticks:
 | End-to-end run in a clean browser with Nightly        | The above                    |
 | The "under a minute to understand" review             | A person outside the project |
 
-Everything else — the three screens, the batching executor, the DAS client with
+Everything else — the four screens, the batching executor, the DAS client with
 its RPC fallback, the sanitisers, the help modal and the accessibility sweep —
 is built and covered by tests.
+
+### Specifically unverified in the events layer
+
+The database side is proven: the RLS suite runs against real Postgres, and the
+draw's mathematics has golden tests plus a second, independently written
+verifier that agrees with the first. Neither of those touches a wallet or a
+chain. These three need a funded wallet and a person at a browser:
+
+- **Sign-In-With-Solana completing against Nightly.** The message is built to
+  match `auth-js`'s own template exactly, and it signs with `signMessage` rather
+  than `signIn` specifically to avoid an upstream bug — but whether Supabase's
+  auth server accepts that hand-built message cannot be checked from the client.
+- **A memo transaction landing on Cookie Chain**, and the memo program address
+  matching what the package assumes on this chain.
+- **The full register → draw → pay flow** with a real audience.
+
+Nothing here is a known failure. They are things nobody has watched work yet,
+and an events feature that claimed otherwise would be making exactly the kind of
+unfalsifiable promise the draw exists to avoid.
 
 ---
 

@@ -1,7 +1,38 @@
 # PRD — Cookie Bakery
 
 **Token launcher + airdrop tool para Cookie Chain (SVM)**
-Versión 1.1.1 · 8 sep 2026 · Autor: Carlos Chao · Estado: aprobado para desarrollo
+Versión 1.2 · 13 sep 2026 · Autor: Carlos Chao · Estado: aprobado para desarrollo
+
+> **Changelog v1.2 — cuatro no-objetivos de §1.5 quedan derogados.** Se añade una
+> capa de **eventos de airdrop para creadores**: el creador abre un evento,
+> comparte un link, su audiencia se registra sola, y él sortea de forma
+> verificable y paga por el motor de airdrop que ya existía. El diseño completo
+> y su razonamiento están en
+> [docs/superpowers/specs/2026-09-10-creator-events-design.md](../superpowers/specs/2026-09-10-creator-events-design.md);
+> el plan de implementación, en
+> [docs/superpowers/plans/2026-09-10-creator-events-phase-1.md](../superpowers/plans/2026-09-10-creator-events-phase-1.md).
+>
+> **§1.5 se mantiene abajo sin tocar**, porque es el registro de por qué el
+> proyecto tiene la forma que tiene. Lo que ha cambiado, y por qué:
+>
+> | §1.5 decía           | Ahora                                                                                                                      |
+> | -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+> | Sin backend/servidor | **Supabase** (Postgres + Auth + RLS). Sin Edge Functions.                                                                  |
+> | Sin base de datos    | **Postgres** para eventos, registros, sorteos y pagos                                                                      |
+> | Sin autenticación    | **Sign-In-With-Solana** — la wallet del creador _es_ la cuenta; sin email ni contraseña                                    |
+> | Sin mobile-first     | La página de registro (`/e/:slug`) **es** mobile-first: es la única pantalla del proyecto pensada para abrirse en un móvil |
+>
+> **RT-03 sobrevive intacto, y es lo que hace defendible el cambio:** la wallet
+> solo firma, la app envía, y ninguna clave privada ni token pasa por un
+> servidor nuestro. Supabase guarda la _intención_ (eventos, registros,
+> ganadores); la cadena guarda _lo que pasó_. Si Supabase desapareciera mañana,
+> los airdrops ya hechos siguen íntegros y comprobables en CookieScan.
+>
+> La objeción de fondo a un backend en una app de cadena no es que exista un
+> servidor —`rpc.cookiescan.io` ya era infraestructura centralizada de un
+> tercero— sino custodia, censura y afirmaciones incomprobables. Por eso: cero
+> custodia de fondos, exportación completa en un clic, y un sorteo que cualquiera
+> puede recalcular en su propio navegador.
 
 > **Changelog v1.1.1** — Correcciones tras implementar RF-01 contra las librerías reales:
 >

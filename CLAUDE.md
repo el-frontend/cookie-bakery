@@ -23,26 +23,33 @@ Vitest is wired up (`jsdom` + `@testing-library/react`, config in `vitest.config
 
 ## Current state
 
-**RF-01 … RF-06 are code complete. RF-07 is partial.** `npm test` runs Vitest (422 tests across 51 files); `npm run ci` is green. The scaffold's framework-kit is gone.
+**RF-01 … RF-06 are code complete. RF-07 is partial.** On top of that, phase 1 of a **creator airdrop-event layer** (spec: `docs/superpowers/specs/2026-09-10-creator-events-design.md`, PRD changelog in `docs/prds/PRD-cookie-bakery.md`) is also code complete: a creator opens an event, followers self-register at `/e/:slug` on their phones, the creator runs a verifiable commit-reveal draw attested on chain, pays winners through the existing airdrop engine, and anyone can re-check the draw at `/e/:slug/verify` or from an export. `npm test` runs Vitest (573 tests across 67 files); `npm run ci` is green. The scaffold's framework-kit is gone.
 
 What is left is work no code can finish — it needs a funded wallet on Cookie Chain and a human in a browser:
 
 - **RF-07.3 is blocked on real COOK**: the `Bakery Cookie (BAKE)` demo mint and its test airdrop. Without them there is no public URL, no screenshots, and AC-07.1/.3/.4 stay open.
 - Manual halves of AC-01.2/.3, AC-02.1/.2/.3, AC-03.1/.2, AC-04.1, AC-05.1 — every one is "do it against the real chain with Nightly and check CookieScan".
 - **AC-06.1** needs a person outside the project, and **incógnita #4** (does Token-2022 `TokenMetadata` work on this chain?) needs a real mint.
+- **The creator-events layer is equally unverified against the real chain**: nobody has completed SIWS against Nightly end to end, confirmed a memo transaction actually lands on Cookie Chain, or run the full register → draw → pay flow with a real audience. The RLS suite (see below) proves the database side; it proves nothing about the wallet or the chain.
 
 Each plan's `**Status:**` line says exactly where it stands. Do not mark those green from a test run alone.
 
-- `src/main.tsx` — `Providers` → `App`
+- `src/main.tsx` — the entry point does almost nothing on purpose: it reads the URL, then lazily imports either `PublicApp` (a follower's `/e/:slug*`) or `CreatorApp` (everything else). This is what keeps a follower pasting an address from downloading the launcher, the wallet plugin or Recharts — see § Bundle.
+- `src/CreatorApp.tsx` — `Providers` → `ToastProvider` → `App`, behind that lazy boundary.
 - `src/providers.tsx` — the one client: `walletSigner({ chain })` then `solanaRpc({ maxConcurrency: 4, rpcUrl })`, exporting `client` and `type AppClient`.
-- `src/App.tsx` — the shell: top bar + section switch (`bake` | `airdrop` | `oven`), footer, the help modal, and the one piece of cross-screen state (the token the Oven hands to Airdrop via "Airdrop more").
-- `src/app/` — `Bake.tsx` (RF-02), `Airdrop.tsx` (RF-03), `Oven.tsx` (RF-04).
-- `src/lib/` — `chain/` (config, explorer, `das.ts`, `links.ts`), `token/` (bakeForm, sizing, the two builders, inspectMint, readMint, holders, metadata, distribution), `airdrop/` (parseCsv, validateRows, mergeDuplicates, probeAtas, sourceAccount, buildPlan, executor, exportCsv), `errors/` (taxonomy + `mapError`), `format/` (address, lamports, `tokenAmount`).
-- `src/store/` — `myTokens.ts`, `airdropHistory.ts`, both versioned localStorage with forgiving reads.
+- `src/App.tsx` — the shell: top bar + section switch (`bake` | `airdrop` | `oven` | `events`), footer, the help modal, and the one piece of cross-screen state (the token — and, from an event, a recipient list — the Oven or Events hands to Airdrop).
+- `src/app/` — `Bake.tsx` (RF-02), `Airdrop.tsx` (RF-03), `Oven.tsx` (RF-04), `Events.tsx` (the creator's event list, sign-in-gated, lazy-loaded like `HoldersChart`).
+- `src/lib/` — `chain/` (config, explorer, `das.ts`, `links.ts`), `token/` (bakeForm, sizing, the two builders, inspectMint, readMint, holders, metadata, distribution), `airdrop/` (parseCsv, validateRows, mergeDuplicates, probeAtas, sourceAccount, buildPlan, executor, exportCsv), `draw/` (`hashEntry`, `shuffle`, `runDraw`, `attest`, `toRecipients`, and `verifyDraw` — a SECOND, independently written implementation of the shuffle, never sharing code with `shuffle.ts`), `supabase/` (typed queries per table, `exportEvent`), `errors/` (taxonomy + `mapError`), `format/` (address, lamports, `tokenAmount`).
+- `src/public/` — the follower-facing surface, no shell, no nav: `Register.tsx` (`/e/:slug`, mobile-first — the one screen in this app meant to open on a phone), `Verify.tsx` (`/e/:slug/verify`), `route.ts` (the path parser `main.tsx` uses to choose `PublicApp` vs `CreatorApp`).
+- `src/store/` — `myTokens.ts`, `airdropHistory.ts`, both versioned localStorage with forgiving reads. Creator-events data lives in Supabase instead (see below) — it is not, and per spec is not meant to be, synced into these stores.
 - `src/index.css` — Tailwind 4, warm-dark palette as CSS custom properties on `:root`, exposed through `@theme inline` (`bg-bg1`, `bg-card`, `text-ink-2`, `border-border-low`, `text-accent`, `text-danger`…). Add new colors as `--foo` on `:root` and map them in `@theme inline`; there is no `tailwind.config.js`, and the `--ease-strong-*` curves are used with `var()` (never re-declared in `@theme inline`).
 - `design/*.dc.html` — the redesign artboards for every screen, including the Oven. Match them when building a screen.
 
 RT-04's `src/app/Help.tsx` was not built as a screen: RF-06.1 specifies a modal reachable from every screen, so it is `src/components/GettingStartedModal.tsx`, opened from the top bar. RF-06.1 also named `Header.tsx`; the existing `TopBar.tsx` is that header and gained the trigger rather than being duplicated.
+
+### What phase 1 of creator events deliberately does NOT include
+
+Deferred to phase 2 (spec §10): social login via OAuth (the `entries` table already carries `user_id`/`social_provider`/`social_handle`, so this lands behind it without a migration), the OBS overlay for the draw, syncing `myTokens`/`airdropHistory` to Supabase, and creator profile pages.
 
 ## Stack — non-negotiable
 
