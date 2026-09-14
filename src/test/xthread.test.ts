@@ -41,11 +41,14 @@ function tweets(): string[] {
   return found.filter(Boolean);
 }
 
-describe("tiene entre 5 y 7 tweets", () => {
+describe("tiene entre 5 y 9 tweets", () => {
   it("cuenta los tweets numerados", () => {
     const count = tweets().length;
     expect(count).toBeGreaterThanOrEqual(5);
-    expect(count).toBeLessThanOrEqual(7);
+    // Un hilo más largo que esto deja de leerse; más corto no cuenta la
+    // historia. El tope subió de 7 a 9 cuando el hilo ganó los tweets del
+    // sorteo verificable, que son los que diferencian el proyecto.
+    expect(count).toBeLessThanOrEqual(9);
   });
 
   it("los numera consecutivamente desde 1", () => {
@@ -86,12 +89,20 @@ describe("ningún tweet supera 280 caracteres", () => {
   );
 });
 
-describe("los placeholders están marcados", () => {
-  it("no finge tener una URL pública ni un mint", () => {
-    // A real-looking but invented URL or mint address in the submission draft
-    // would be worse than an obvious placeholder.
-    expect(source).toContain("{{APP_URL}}");
-    expect(source).toMatch(/\{\{BAKE_MINT\}\}/);
-    expect(source).toMatch(/[Bb]efore posting/);
+describe("está listo para publicar", () => {
+  it("no queda ningún placeholder sin sustituir", () => {
+    // This assertion used to require `{{APP_URL}}` and `{{BAKE_MINT}}` to be
+    // PRESENT: while neither existed, an obvious placeholder was safer than an
+    // invented value. Both are real now — the app is deployed and the mint is
+    // initialised on chain — so the invariant flips. A `{{...}}` reaching a
+    // published thread is the failure this now guards against.
+    expect(source).not.toMatch(/\{\{[A-Z_]+\}\}/);
+  });
+
+  it("lleva la URL desplegada y un mint base58 plausible", () => {
+    expect(source).toContain(
+      "https://cookie-bakery.elfrontendoficial.workers.dev"
+    );
+    expect(source).toMatch(/\b[1-9A-HJ-NP-Za-km-z]{32,44}\b/);
   });
 });

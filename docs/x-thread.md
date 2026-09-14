@@ -3,14 +3,20 @@
 Ready to post. Attach `cookie-bakery-demo.gif` to tweet 1 — X loops GIFs
 automatically, so it plays without anyone tapping anything.
 
-**Replace before posting:** `{{BAKE_MINT}}` — the demo mint address, once the
-token is created on Cookie Chain. Everything else is final.
+Nothing left to fill in. The URL is live and the mint exists on chain —
+verified against the RPC, not copied from a note.
 
-Live app: https://cookie-bakery.elfrontendoficial.workers.dev
+- Live app: https://cookie-bakery.elfrontendoficial.workers.dev
+- Demo mint: `54tqwHeoDwyY9hCRVGZtrHqvav1Zj27g4gNbRNQTN451` (ElFrontend · FNTD,
+  Token-2022)
+
+One thing to check before posting: `@cookiechain` in tweets 1 and 7 is a guess
+at the handle. Confirm it, or drop the mention — tagging the wrong account in
+a bounty the sponsor reads is worse than not tagging at all.
 
 ---
 
-## Tweet 1 — the hook (attach the GIF)
+## 1 / 8
 
 Most token airdrop tools start with "upload a CSV of wallet addresses."
 
@@ -25,7 +31,7 @@ https://cookie-bakery.elfrontendoficial.workers.dev
 
 ---
 
-## Tweet 2 — the problem
+## 2 / 8
 
 If you have a community, you have names in a chat — not a column of base58
 addresses.
@@ -37,7 +43,7 @@ That gap is the whole product.
 
 ---
 
-## Tweet 3 — how it works
+## 3 / 8
 
 1. Open an event against your token
 2. Share the link — followers register themselves from their phone
@@ -48,7 +54,7 @@ Registering costs a follower nothing. No COOK, no gas, no signature.
 
 ---
 
-## Tweet 4 — the part I care about
+## 4 / 8
 
 A giveaway where the host announces a winner and nobody can check is worth
 nothing.
@@ -60,7 +66,7 @@ Knowing the seed buys you nothing when the hash hasn't been produced.
 
 ---
 
-## Tweet 5 — verify it yourself
+## 5 / 8
 
 The commitment and the result are both written on chain as memo transactions.
 
@@ -71,7 +77,7 @@ Anyone can recompute the draw in their own browser.
 
 ---
 
-## Tweet 6 — what it doesn't claim
+## 6 / 8
 
 It's not a VRF. A validator producing the target block has marginal influence,
 and I'd rather say that than pretend otherwise.
@@ -81,21 +87,20 @@ it. This makes the draw checkable, not the creator trustworthy.
 
 ---
 
-## Tweet 7 — the build
+## 7 / 8
 
-Built on @solana Kit v8 — no web3.js 1.x, no wallet-adapter.
-
-Token-2022 mints, batched transfers with pause/retry, and 576 tests including
-a row-level-security suite against real Postgres.
+Built on @solana Kit v8. Token-2022 mints, batched transfers with pause and
+retry, 576 tests including a row-level-security suite against real Postgres.
 
 Open source, MIT:
 https://github.com/el-frontend/cookie-bakery
 
-Demo mint: {{BAKE_MINT}}
+Demo mint:
+54tqwHeoDwyY9hCRVGZtrHqvav1Zj27g4gNbRNQTN451
 
 ---
 
-## Tweet 8 — the bridge (required by the bounty)
+## 8 / 8
 
 New to Cookie Chain? Bridge in and try it:
 
