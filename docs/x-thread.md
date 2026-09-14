@@ -62,12 +62,12 @@ Knowing the seed buys you nothing when the hash hasn't been produced.
 
 ## Tweet 5 — verify it yourself
 
-Both the commitment and the result are written on chain as memo transactions.
+The commitment and the result are both written on chain as memo transactions.
 
 What proves the timing isn't a database row — it's that the commit landed in a
-slot _below_ the target slot. Both numbers are public on CookieScan.
+slot _below_ the target. Both numbers are public on CookieScan.
 
-Anyone can recompute the whole draw in their own browser.
+Anyone can recompute the draw in their own browser.
 
 ---
 
