@@ -48,7 +48,7 @@ export function TopBar({
   return (
     <header className="flex items-center justify-between gap-2 border-b border-[#211d19] px-6 py-[18px] sm:gap-3 sm:px-8">
       <div className="flex min-w-0 flex-1 items-center justify-start gap-2.5">
-        <span className="shrink-0 text-accent">
+        <span className="shrink-0">
           <BakeryMark />
         </span>
         {/* The mark alone carries the brand once space is tight; the wordmark
