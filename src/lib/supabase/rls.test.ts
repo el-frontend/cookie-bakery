@@ -312,6 +312,26 @@ describe("RLS · events", () => {
     expect(data).toEqual([]);
   });
 
+  when()(
+    "un select sin filtro devuelve eventos de OTROS creadores",
+    async () => {
+      // Not a leak to fix in SQL — `events_public_read` has to stay open so
+      // `/e/<slug>` resolves without a session. This pins the consequence:
+      // RLS does NOT scope a list of events, so any code that shows "your
+      // events" must filter by `creator_id` itself. `listMyEvents` once did
+      // not, and every visitor saw every creator's events with the owner
+      // controls beside them. If this test ever goes red because the rows
+      // stopped being visible, the client-side filter is no longer the thing
+      // holding the line and `listMyEvents` should be revisited.
+      const { data, error } = await creatorB.from("events").select("id");
+      expect(error).toBeNull();
+      expect(
+        data!.map((row) => row.id),
+        "creator B debería ver el evento de creator A: la política es pública a propósito"
+      ).toContain(eventOpen);
+    }
+  );
+
   when()("entry_count lo mantiene el trigger", async () => {
     const before = await admin
       .from("events")

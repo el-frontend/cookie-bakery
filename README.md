@@ -9,7 +9,7 @@ browser sends, and everything that needs to survive a reload lives in
 
 Built for the Superteam Earn **"Create an App on Cookie Chain"** bounty.
 
-- **Live app:** _not deployed yet_ — see [Deploying](#deploying)
+- **Live app:** https://cookie-bakery.elfrontendoficial.workers.dev
 - **Repo:** https://github.com/el-frontend/cookie-bakery
 - **License:** [MIT](./LICENSE)
 

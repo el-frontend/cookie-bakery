@@ -120,9 +120,25 @@ export async function closeEvent(id: string): Promise<void> {
 }
 
 export async function listMyEvents(): Promise<EventRow[]> {
+  // The `creator_id` filter is load-bearing, NOT a convenience: RLS does not
+  // scope this list. `events_public_read` deliberately grants anon and
+  // authenticated SELECT on every non-draft event so `/e/<slug>` can resolve
+  // one without a session, which means an unfiltered `select()` returns every
+  // creator's events to every visitor — and the screen renders owner controls
+  // (close, draw, pay) beside each one. The writes stay safe behind
+  // `events_owner_all`, so the damage was disclosure and a misleading UI, not
+  // a hijacked giveaway. Do not "simplify" this back to a bare select.
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError) throw new Error(authError.message);
+  if (!user) return [];
+
   const { data, error } = await supabase
     .from("events")
     .select()
+    .eq("creator_id", user.id)
     .order("created_at", { ascending: false });
   if (error) throw new Error(error.message);
   return data;
