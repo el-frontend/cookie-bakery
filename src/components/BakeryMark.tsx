@@ -14,7 +14,10 @@
 /** The art's own bounding box, so `size` can mean height and width follows. */
 const ASPECT = 118 / 167;
 
-export function BakeryMark({ size = 28 }: { size?: number }) {
+// 32, not the old glyph's 26: that one filled a 26x26 square, while the B is
+// portrait and only ~0.71 as wide as it is tall. Matched on height it reads
+// noticeably lighter than the wordmark beside it, so it gets the extra px.
+export function BakeryMark({ size = 32 }: { size?: number }) {
   return (
     <img
       src="/mark.svg"
