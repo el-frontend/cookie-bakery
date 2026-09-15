@@ -1,4 +1,11 @@
 import { lazy, Suspense, useCallback, useState } from "react";
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router";
 import { useClient } from "@solana/react";
 import { useConnectedWallet } from "@solana/kit-plugin-wallet/react";
 import { Airdrop } from "./app/Airdrop";
@@ -26,12 +33,6 @@ const Events = lazy(() =>
 );
 
 /**
- * The warm-dark shell.
- *
- * The single radial glow at the top is the only ambient treatment — it gives
- * the canvas depth without competing with the one accent. Everything else is
- * flat surfaces and hairlines.
- *
  * The shell owns the one piece of cross-screen state: the token (and,
  * optionally, a recipient list) the Oven or an event hands to the Airdrop
  * screen. Keeping it here rather than in a store means it cannot outlive the
@@ -46,31 +47,65 @@ type AirdropHandoff = {
   token: SelectedToken;
 };
 
+/**
+ * Marks the one history entry a hand-off created.
+ *
+ * The payload stays in React state — recipient lists are too big for the
+ * history entry, and `history.state` survives a reload, which is exactly the
+ * confusing default the comment above rules out. What goes in the history
+ * entry is this flag, so the Airdrop screen preloads only when the CURRENT
+ * entry is the one that carried the hand-off. Clicking "Airdrop" in the top
+ * bar pushes an entry without it and gets a clean screen; going Back past the
+ * hand-off does too; going Forward onto it again restores the preload. After
+ * a reload the flag outlives the payload, and a null payload preloads
+ * nothing — which is the behaviour we want anyway.
+ */
+type HandoffMarker = { handoff?: boolean };
+
+const SECTION_PATHS: Record<Section, string> = {
+  airdrop: "/airdrop",
+  bake: "/bake",
+  events: "/events",
+  oven: "/oven",
+};
+
+/**
+ * Which nav pill is lit, derived from the URL rather than held alongside it.
+ *
+ * Two sources of truth for "where am I" is how a back button ends up moving
+ * the URL without moving the screen. Unknown paths report `bake` to match the
+ * catch-all route below, so the highlight never goes blank mid-redirect.
+ */
+export function sectionFromPathname(pathname: string): Section {
+  const first = pathname.split("/").filter(Boolean)[0];
+  if (first === "airdrop" || first === "events" || first === "oven") {
+    return first;
+  }
+  return "bake";
+}
+
 export default function App() {
-  const [section, setSection] = useState<Section>("bake");
   const [helpOpen, setHelpOpen] = useState(false);
   const [helpClosing, setHelpClosing] = useState(false);
   const [handoff, setHandoff] = useState<AirdropHandoff | null>(null);
-  // The staggered entrance is an introduction, and an introduction only works
-  // once. After the first navigation the same 360ms cascade is just latency on
-  // the most repeated interaction in the app, so `data-nav` shortens it.
   const [hasNavigated, setHasNavigated] = useState(false);
 
-  // The top bar already carries the address and balance, so the full wallet
-  // panel is only worth its space while there is nothing connected.
+  const navigate = useNavigate();
+  const location = useLocation();
+  const section = sectionFromPathname(location.pathname);
+  const carriesHandoff = (location.state as HandoffMarker | null)?.handoff;
+
   const connected = useConnectedWallet(useClient<AppClient>());
   const toast = useToast();
 
-  const navigate = useCallback((next: Section) => {
-    setSection(next);
-    // Only an explicit hand-off should preselect a token; arriving at
-    // Airdrop from the nav must start clean.
-    setHandoff(null);
-    setHasNavigated(true);
-  }, []);
+  const go = useCallback(
+    (next: Section) => {
+      setHasNavigated(true);
+      navigate(SECTION_PATHS[next]);
+    },
+    [navigate]
+  );
 
-  // The modal outlives its own close by the length of the scrim's fade: a
-  // dialog unmounted on click cannot animate out.
   const closeHelp = useCallback(() => {
     setHelpClosing(true);
     setTimeout(() => {
@@ -79,11 +114,14 @@ export default function App() {
     }, 140);
   }, []);
 
-  const airdropToken = useCallback((token: SelectedToken) => {
-    setHandoff({ recipients: null, token });
-    setSection("airdrop");
-    setHasNavigated(true);
-  }, []);
+  const airdropToken = useCallback(
+    (token: SelectedToken) => {
+      setHandoff({ recipients: null, token });
+      setHasNavigated(true);
+      navigate(SECTION_PATHS.airdrop, { state: { handoff: true } });
+    },
+    [navigate]
+  );
 
   /**
    * The Events panel's one way into Airdrop, shared by two callers:
@@ -110,11 +148,13 @@ export default function App() {
         return;
       }
       setHandoff({ eventContext, recipients, token });
-      setSection("airdrop");
       setHasNavigated(true);
+      navigate(SECTION_PATHS.airdrop, { state: { handoff: true } });
     },
-    [airdropToken, toast]
+    [airdropToken, navigate, toast]
   );
+
+  const active = carriesHandoff ? handoff : null;
 
   return (
     <div className="relative min-h-screen overflow-x-clip bg-bg1 text-foreground">
@@ -130,7 +170,7 @@ export default function App() {
       <div className="relative z-10 flex min-h-screen flex-col">
         <TopBar
           active={section}
-          onNavigate={navigate}
+          onNavigate={go}
           onOpenHelp={() => setHelpOpen(true)}
         />
 
@@ -138,11 +178,6 @@ export default function App() {
           className="flex flex-grow justify-center px-6 py-11 sm:px-8"
           data-nav={hasNavigated ? "repeat" : "first"}
         >
-          {/*
-           * Airdrop and Oven are wider than Bake on purpose: both carry
-           * tables, and squeezing 44-character addresses into the form column
-           * would wrap every row.
-           */}
           <div
             className={
               "w-full " +
@@ -152,38 +187,55 @@ export default function App() {
             <div className="flex flex-col gap-6">
               {connected ? null : <WalletButton client={client} />}
 
-              {section === "bake" ? (
-                <Bake client={client} />
-              ) : section === "airdrop" ? (
-                <Airdrop
-                  client={client}
-                  initialToken={handoff?.token ?? null}
-                  onBake={() => navigate("bake")}
-                  preloaded={
-                    handoff?.recipients
-                      ? {
-                          eventContext: handoff.eventContext,
-                          recipients: handoff.recipients,
-                          token: handoff.token,
-                        }
-                      : null
+              <Routes>
+                <Route path="/bake" element={<Bake client={client} />} />
+                <Route
+                  path="/airdrop"
+                  element={
+                    <Airdrop
+                      client={client}
+                      initialToken={active?.token ?? null}
+                      onBake={() => go("bake")}
+                      preloaded={
+                        active?.recipients
+                          ? {
+                              eventContext: active.eventContext,
+                              recipients: active.recipients,
+                              token: active.token,
+                            }
+                          : null
+                      }
+                    />
                   }
                 />
-              ) : section === "events" ? (
-                <Suspense
-                  fallback={
-                    <div className="h-40 animate-pulse rounded-xl border border-border-low bg-card" />
+                <Route
+                  path="/oven"
+                  element={
+                    <Oven
+                      client={client}
+                      onAirdrop={airdropToken}
+                      onBake={() => go("bake")}
+                    />
                   }
-                >
-                  <Events onAirdrop={airdropRecipients} />
-                </Suspense>
-              ) : (
-                <Oven
-                  client={client}
-                  onAirdrop={airdropToken}
-                  onBake={() => navigate("bake")}
                 />
-              )}
+                <Route
+                  path="/events"
+                  element={
+                    <Suspense
+                      fallback={
+                        <div className="h-40 animate-pulse rounded-xl border border-border-low bg-card" />
+                      }
+                    >
+                      <Events onAirdrop={airdropRecipients} />
+                    </Suspense>
+                  }
+                />
+                {/* `/app` itself, and anything unrecognised below it, is Bake. */}
+                <Route
+                  path="*"
+                  element={<Navigate replace to={SECTION_PATHS.bake} />}
+                />
+              </Routes>
             </div>
           </div>
         </main>

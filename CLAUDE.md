@@ -23,7 +23,7 @@ Vitest is wired up (`jsdom` + `@testing-library/react`, config in `vitest.config
 
 ## Current state
 
-**RF-01 … RF-06 are code complete. RF-07 is partial.** On top of that, phase 1 of a **creator airdrop-event layer** (spec: `docs/superpowers/specs/2026-09-10-creator-events-design.md`, PRD changelog in `docs/prds/PRD-cookie-bakery.md`) is also code complete: a creator opens an event, followers self-register at `/e/:slug` on their phones, the creator runs a verifiable commit-reveal draw attested on chain, pays winners through the existing airdrop engine, and anyone can re-check the draw at `/e/:slug/verify` or from an export. `npm test` runs Vitest (573 tests across 67 files); `npm run ci` is green. The scaffold's framework-kit is gone.
+**RF-01 … RF-06 are code complete. RF-07 is partial.** On top of that, phase 1 of a **creator airdrop-event layer** (spec: `docs/superpowers/specs/2026-09-10-creator-events-design.md`, PRD changelog in `docs/prds/PRD-cookie-bakery.md`) is also code complete: a creator opens an event, followers self-register at `/e/:slug` on their phones, the creator runs a verifiable commit-reveal draw attested on chain, pays winners through the existing airdrop engine, and anyone can re-check the draw at `/e/:slug/verify` or from an export. A public **landing** now sits at `/` and the creator app moved to `/app` (see § URL layout). `npm test` runs Vitest (596 tests across 70 files; 18 of them are the RLS suite, skipped without a local Postgres); `npm run ci` is green. The scaffold's framework-kit is gone.
 
 What is left is work no code can finish — it needs a funded wallet on Cookie Chain and a human in a browser:
 
@@ -34,13 +34,15 @@ What is left is work no code can finish — it needs a funded wallet on Cookie C
 
 Each plan's `**Status:**` line says exactly where it stands. Do not mark those green from a test run alone.
 
-- `src/main.tsx` — the entry point does almost nothing on purpose: it reads the URL, then lazily imports either `PublicApp` (a follower's `/e/:slug*`) or `CreatorApp` (everything else). This is what keeps a follower pasting an address from downloading the launcher, the wallet plugin or Recharts — see § Bundle.
-- `src/CreatorApp.tsx` — `Providers` → `ToastProvider` → `App`, behind that lazy boundary.
+- `src/main.tsx` — the entry point does almost nothing on purpose: it reads the URL through `parseSurface`, then lazily imports exactly one of three surfaces — `Landing` (`/`), `PublicApp` (a follower's `/e/:slug*`) or `CreatorApp` (`/app*`). This is what keeps a follower pasting an address from downloading the launcher, the wallet plugin, the router or Recharts — see § Bundle.
+- `src/surface.ts` — the three-way split at the root (`app` | `landing` | `public`) and `APP_BASENAME`. Deliberately a string match, not a router: `main.tsx` runs it before it knows which half of the app to download, so everything it imports is imported by every visitor. Unknown paths resolve to the landing rather than 404ing — both deploys rewrite every path to `index.html`, so this function, not the CDN, decides what a typo renders.
+- `src/landing/Landing.tsx` — the marketing page at `/`, the only screen someone arrives at cold. No wallet, no RPC client, no router, no React state: it is static markup plus the shared `Footer` and `Button` classes, and `npm test` pins that (`src/landing/Landing.test.tsx`).
+- `src/CreatorApp.tsx` — `BrowserRouter basename="/app"` → `Providers` → `ToastProvider` → `App`, behind that lazy boundary. The router is mounted HERE, not in `main.tsx`: only the creator sections need real URLs, and a root router would bill the landing and the follower's register page for something neither one navigates.
 - `src/providers.tsx` — the one client: `walletSigner({ chain })` then `solanaRpc({ maxConcurrency: 4, rpcUrl })`, exporting `client` and `type AppClient`.
-- `src/App.tsx` — the shell: top bar + section switch (`bake` | `airdrop` | `oven` | `events`), footer, the help modal, and the one piece of cross-screen state (the token — and, from an event, a recipient list — the Oven or Events hands to Airdrop).
+- `src/App.tsx` — the shell: top bar + the four section routes (`/bake` | `/airdrop` | `/oven` | `/events`, below the `/app` basename, with `*` redirecting to Bake), footer, the help modal, and the one piece of cross-screen state (the token — and, from an event, a recipient list — the Oven or Events hands to Airdrop).
 - `src/app/` — `Bake.tsx` (RF-02), `Airdrop.tsx` (RF-03), `Oven.tsx` (RF-04), `Events.tsx` (the creator's event list, sign-in-gated, lazy-loaded like `HoldersChart`).
 - `src/lib/` — `chain/` (config, explorer, `das.ts`, `links.ts`), `token/` (bakeForm, sizing, the two builders, inspectMint, readMint, holders, metadata, distribution), `airdrop/` (parseCsv, validateRows, mergeDuplicates, probeAtas, sourceAccount, buildPlan, executor, exportCsv), `draw/` (`hashEntry`, `shuffle`, `runDraw`, `attest`, `toRecipients`, and `verifyDraw` — a SECOND, independently written implementation of the shuffle, never sharing code with `shuffle.ts`), `supabase/` (typed queries per table, `exportEvent`), `errors/` (taxonomy + `mapError`), `format/` (address, lamports, `tokenAmount`).
-- `src/public/` — the follower-facing surface, no shell, no nav: `Register.tsx` (`/e/:slug`, mobile-first — the one screen in this app meant to open on a phone), `Verify.tsx` (`/e/:slug/verify`), `route.ts` (the path parser `main.tsx` uses to choose `PublicApp` vs `CreatorApp`).
+- `src/public/` — the follower-facing surface, no shell, no nav: `Register.tsx` (`/e/:slug`, mobile-first — the one screen in this app meant to open on a phone), `Verify.tsx` (`/e/:slug/verify`), `route.ts` (the slug parser `surface.ts` consumes).
 - `src/store/` — `myTokens.ts`, `airdropHistory.ts`, both versioned localStorage with forgiving reads. Creator-events data lives in Supabase instead (see below) — it is not, and per spec is not meant to be, synced into these stores.
 - `src/index.css` — Tailwind 4, warm-dark palette as CSS custom properties on `:root`, exposed through `@theme inline` (`bg-bg1`, `bg-card`, `text-ink-2`, `border-border-low`, `text-accent`, `text-danger`…). Add new colors as `--foo` on `:root` and map them in `@theme inline`; there is no `tailwind.config.js`, and the `--ease-strong-*` curves are used with `var()` (never re-declared in `@theme inline`).
 - `design/*.dc.html` — the redesign artboards for every screen, including the Oven. Match them when building a screen.
@@ -55,15 +57,16 @@ Deferred to phase 2 (spec §10): social login via OAuth (the `entries` table alr
 
 Per PRD RT-01, aligned with the vendored `solana-dev` skill. **Banned:** `@solana/web3.js` 1.x, `@solana/spl-token`, `@solana/wallet-adapter-*`, and framework-kit (`@solana/client`, `@solana/react-hooks`).
 
-| Layer                     | Package                                                         | Minimum   |
-| ------------------------- | --------------------------------------------------------------- | --------- |
-| SDK                       | `@solana/kit`                                                   | v7+       |
-| RPC + tx planner/executor | `@solana/kit-plugin-rpc`                                        | 0.13+     |
-| Wallet Standard           | `@solana/kit-plugin-wallet` (+ `/react`)                        | **0.14+** |
-| React bindings            | `@solana/react`                                                 | **7.1+**  |
-| Data cache                | `swr` (via `@solana/react/swr`) — **not** TanStack Query        | —         |
-| Programs                  | `@solana-program/{token-2022,token,system,compute-budget,memo}` | —         |
-| Charts                    | `recharts` — **lazy-loaded**, see below                         | —         |
+| Layer                      | Package                                                           | Minimum   |
+| -------------------------- | ----------------------------------------------------------------- | --------- |
+| SDK                        | `@solana/kit`                                                     | v7+       |
+| RPC + tx planner/executor  | `@solana/kit-plugin-rpc`                                          | 0.13+     |
+| Wallet Standard            | `@solana/kit-plugin-wallet` (+ `/react`)                          | **0.14+** |
+| React bindings             | `@solana/react`                                                   | **7.1+**  |
+| Data cache                 | `swr` (via `@solana/react/swr`) — **not** TanStack Query          | —         |
+| Programs                   | `@solana-program/{token-2022,token,system,compute-budget,memo}`   | —         |
+| Charts                     | `recharts` — **lazy-loaded**, see below                           | —         |
+| Routing (creator app only) | `react-router` — inside the `CreatorApp` chunk, never at the root | 7+        |
 
 Do not install: `@solana/kit-plugins`, `@solana/kit-plugin-airdrop`, `@solana/kit-plugin-payer`, `@solana/kit-client-*` (deprecated), or `@solana/kit-plugin-instruction-plan` (`solanaRpc` already bundles it).
 
@@ -84,6 +87,29 @@ anywhere puts it back in the initial bundle (820 kB → 461 kB was the differenc
 - **No backend, no database, no private keys.** Airdrop state in memory + `localStorage` so a reload can resume.
 - **No on-chain programs of our own** — native programs only.
 - **UI copy in English**, even though the PRD is in Spanish.
+
+### URL layout
+
+| Path                              | Surface                                | Chunk        |
+| --------------------------------- | -------------------------------------- | ------------ |
+| `/`                               | Landing (marketing)                    | `Landing`    |
+| `/app`                            | Creator app — redirects to `/app/bake` | `CreatorApp` |
+| `/app/{bake,airdrop,oven,events}` | the four creator sections              | `CreatorApp` |
+| `/e/:slug`                        | Follower registration                  | `PublicApp`  |
+| `/e/:slug/verify`                 | Draw verifier                          | `PublicApp`  |
+| anything else                     | Landing — `parseSurface` never 404s    | `Landing`    |
+
+`react-router` is mounted **only** inside `CreatorApp`, under `basename="/app"`.
+Putting it at the root would charge the landing and the follower's phone for a
+router neither one navigates, against the spec's §8.3 bundle budget. The root
+split stays the plain string match in `src/surface.ts`.
+
+The landing is the page someone arrives at cold, so it carries no wallet, no
+RPC client, no router and **no React state** — `src/landing/Landing.test.tsx`
+fails the build if that stops being true. Its scroll entrance is CSS
+(`animation-timeline: view()` inside `@supports`), not an `IntersectionObserver`:
+a JS-gated reveal defaults to hidden, so a callback that never fires shows a
+blank page. Visible has to be the fallback.
 
 ### Network / env
 

@@ -10,6 +10,8 @@ browser sends, and everything that needs to survive a reload lives in
 Built for the Superteam Earn **"Create an App on Cookie Chain"** bounty.
 
 - **Live app:** https://cookie-bakery.elfrontendoficial.workers.dev
+  — the root is the landing; the app itself is at
+  [`/app`](https://cookie-bakery.elfrontendoficial.workers.dev/app)
 - **Repo:** https://github.com/el-frontend/cookie-bakery
 - **License:** [MIT](./LICENSE)
 
@@ -83,11 +85,18 @@ real Postgres — see [Running it locally](#running-it-locally).
 
 ### Screenshots
 
-> **Not captured yet.** The screenshots and the flow GIF are taken from the real
-> app against Cookie Chain mainnet, which needs a funded wallet — see
-> [What is still missing](#what-is-still-missing). Placing mockups here instead
-> would misrepresent the build, so the section stays empty until the real run
-> happens.
+Three captures of the real app running against Cookie Chain mainnet, also shown
+on the landing at [`/`](https://cookie-bakery.elfrontendoficial.workers.dev):
+
+| Screen  | Capture                                |
+| ------- | -------------------------------------- |
+| Bake    | ![Bake](./public/shots/bake.png)       |
+| Airdrop | ![Airdrop](./public/shots/airdrop.png) |
+| Oven    | ![Oven](./public/shots/oven.png)       |
+
+The flow GIF is still missing — see
+[What is still missing](#what-is-still-missing). No mockups are used anywhere
+here; a screenshot that is not of the real build would misrepresent it.
 
 ---
 

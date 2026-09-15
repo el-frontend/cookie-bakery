@@ -217,6 +217,53 @@
   }
 
   /* For the success card — the one screen rare enough to spend delight on. */
+  /*
+   * The landing's scroll entrance.
+   *
+   * Scroll-driven CSS, deliberately, with no JavaScript anywhere near it.
+   *
+   * The obvious implementation is an `IntersectionObserver` that flips a
+   * `data-shown` attribute, and it was written that way first. It is the wrong
+   * trade: the hidden state has to be the default, so any browser that does
+   * not deliver the callback — a throttled tab, an offscreen renderer, a
+   * scroll restored past the element, a bundle that failed to execute — shows
+   * a blank page instead of a landing. That is a catastrophic failure mode for
+   * the one page a visitor arrives at cold, bought for a fade.
+   *
+   * `animation-timeline: view()` inverts it. Visible is the default, the
+   * entrance is added only inside `@supports`, and the animation is driven by
+   * the element's own position in the scroller rather than by a callback that
+   * may never arrive — so it cannot get stuck half-applied. Browsers without
+   * scroll-driven animations simply render the finished page, which is the
+   * outcome we actually care about.
+   *
+   * `entry 0% cover 16%` finishes the fade shortly after the element's top
+   * edge clears the viewport bottom; anything already on screen at load is
+   * past the range and starts fully visible. No stagger is declared because
+   * each element carries its own timeline and the offsets between them come
+   * out of the layout for free.
+   */
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      .reveal {
+        animation: reveal-in linear both;
+        animation-timeline: view();
+        animation-range: entry 0% cover 16%;
+      }
+    }
+  }
+
+  @keyframes reveal-in {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
   .pop-in {
     opacity: 1;
     transform: scale(1);
